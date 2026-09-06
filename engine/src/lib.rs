@@ -6,6 +6,7 @@
 //! Key URI format) and publicly documented de-facto algorithms (Steam, MOTP,
 //! Yandex.Key) are re-implemented here.
 
+pub mod cipher;
 pub mod encoding;
 pub mod error;
 pub mod kdf;
