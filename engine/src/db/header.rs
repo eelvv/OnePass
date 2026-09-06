@@ -212,13 +212,15 @@ impl KdbxHeader {
                 self.version,
             );
         }
-        // StreamStartBytes (9)
-        push_field(
-            &mut out,
-            FIELD_STREAM_START_BYTES,
-            &self.stream_start_bytes,
-            self.version,
-        );
+        // StreamStartBytes (9) — KDBX 3.1 only.
+        if self.version < VERSION_40 {
+            push_field(
+                &mut out,
+                FIELD_STREAM_START_BYTES,
+                &self.stream_start_bytes,
+                self.version,
+            );
+        }
         // EndOfHeader (0) — KeePass writes "\r\n\r\n" as the field data.
         out.push(FIELD_END);
         push_size(&mut out, 4, self.version);
@@ -304,7 +306,8 @@ mod tests {
             compression: Compression::Gzip,
             master_seed: [0x01; 32],
             encryption_iv: vec![0x02; 16],
-            stream_start_bytes: [0x03; 32],
+            // StreamStartBytes is a 3.1-only field; KDBX 4 stores it as zeros.
+            stream_start_bytes: [0u8; 32],
             kdf: KdfParams::Argon2 {
                 id: Argon2Variant::Argon2d,
                 salt: [0x04; 32],

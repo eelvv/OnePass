@@ -3,12 +3,14 @@
 use hmac::{Hmac, Mac};
 use sha2::{Digest, Sha256, Sha512};
 
-use crate::db::compress::gzip_decompress;
-use crate::db::header::VERSION_40;
+use crate::cipher::CipherAlgorithm;
+use crate::db::compress::{gzip_compress, gzip_decompress};
+use crate::db::header::{VERSION_40, VERSION_41};
 use crate::db::stream::{hashed_block, hmac_block};
-use crate::db::xml;
+use crate::db::variant_dict::VariantDictionary;
+use crate::db::{keys, xml};
 use crate::db::{
-    keys, Argon2Variant, Compression, InnerHeader, KdbxHeader, KdfParams, ProtectedStream,
+    Argon2Variant, Compression, InnerHeader, KdbxHeader, KdfParams, ProtectedStream,
     ProtectedStreamKind, Vault,
 };
 use crate::error::{Error, Result};
@@ -60,6 +62,95 @@ pub fn open(data: &[u8], password: &[u8]) -> Result<Vault> {
     xml::parse(xml_bytes, &mut stream)
 }
 
+/// Saves a [`Vault`] as an encrypted KDBX 4 file with the given password.
+///
+/// Uses Argon2d KDF, AES-256-CBC, GZip, and a ChaCha20 inner random stream.
+pub fn save(vault: &Vault, password: &[u8]) -> Result<Vec<u8>> {
+    // --- generate random parameters --------------------------------------
+    let master_seed = random_bytes(32)?;
+    let iv = random_bytes(16)?;
+    let salt = random_bytes(32)?;
+    let inner_key = random_bytes(64)?;
+
+    let kdf = KdfParams::Argon2 {
+        id: Argon2Variant::Argon2d,
+        salt: to32(salt)?,
+        parallelism: 2,
+        memory: 64 * 1024 * 1024,
+        iterations: 3,
+        version: 0x13,
+    };
+
+    let header = KdbxHeader {
+        version: VERSION_41,
+        cipher: CipherAlgorithm::Aes256Cbc,
+        compression: Compression::Gzip,
+        master_seed: to32(master_seed)?,
+        encryption_iv: iv,
+        stream_start_bytes: [0u8; 32],
+        kdf,
+        public_custom_data: VariantDictionary::new(),
+        inner_random_stream_id: None,
+        inner_random_stream_key: None,
+    };
+    let header_bytes = header.serialize();
+    let header_hash: [u8; 32] = Sha256::digest(&header_bytes).into();
+
+    // --- serialize XML + inner header ------------------------------------
+    let mut stream = ProtectedStream::new(ProtectedStreamKind::ChaCha20, &inner_key);
+    let xml_bytes = xml::serialize(vault, &mut stream, &header_hash)?;
+
+    let inner = InnerHeader {
+        inner_random_stream_id: 3,
+        inner_random_stream_key: inner_key,
+        binaries: Vec::new(),
+    };
+    let mut payload = inner.serialize();
+    payload.extend_from_slice(&xml_bytes);
+
+    // --- compress + encrypt + HMAC blocks ---------------------------------
+    let compressed = gzip_compress(&payload)?;
+
+    let composite = keys::composite_key(&[&keys::password_key(password)]);
+    let transformed = transform(&header, &composite)?;
+    let final_key = keys::final_key(&header.master_seed, &transformed);
+    let hmac_key = keys::hmac_key(&header.master_seed, &transformed);
+
+    let ciphertext = header
+        .cipher
+        .encrypt(&final_key, &header.encryption_iv, &compressed)?;
+    let blocks = hmac_block::encode(&ciphertext, &hmac_key, 1024 * 1024);
+
+    // --- assemble: header || header_hash || header_hmac || blocks ---------
+    let header_hmac = compute_header_hmac(&header_bytes, &hmac_key);
+    let mut out = header_bytes;
+    out.extend_from_slice(&header_hash);
+    out.extend_from_slice(&header_hmac);
+    out.extend_from_slice(&blocks);
+    Ok(out)
+}
+
+fn random_bytes(len: usize) -> Result<Vec<u8>> {
+    let mut buf = vec![0u8; len];
+    getrandom::getrandom(&mut buf).map_err(|e| Error::Encoding(format!("getrandom: {e}")))?;
+    Ok(buf)
+}
+
+fn to32(v: Vec<u8>) -> Result<[u8; 32]> {
+    v.try_into()
+        .map_err(|_| Error::Encoding("expected 32 bytes".to_string()))
+}
+
+fn compute_header_hmac(header_bytes: &[u8], hmac_key: &[u8; 64]) -> [u8; 32] {
+    let mut bk = Sha512::new();
+    bk.update([0xFFu8; 8]);
+    bk.update(hmac_key);
+    let block_key = bk.finalize();
+    let mut mac = Hmac::<Sha256>::new_from_slice(&block_key).expect("hmac key is valid");
+    mac.update(header_bytes);
+    mac.finalize().into_bytes().into()
+}
+
 fn transform(header: &KdbxHeader, composite: &[u8; 32]) -> Result<[u8; 32]> {
     match &header.kdf {
         KdfParams::Aes { rounds, seed } => transform_aes_kdf(seed, composite, *rounds),
@@ -108,13 +199,7 @@ fn verify_header_auth(
         return Err(Error::Encoding("header sha256 mismatch".to_string()));
     }
 
-    let mut bk = Sha512::new();
-    bk.update([0xFFu8; 8]);
-    bk.update(hmac_key);
-    let block_key = bk.finalize();
-    let mut mac = Hmac::<Sha256>::new_from_slice(&block_key).map_err(|_| Error::InvalidSecret)?;
-    mac.update(header_bytes);
-    if mac.finalize().into_bytes().as_slice() != stored_hmac {
+    if compute_header_hmac(header_bytes, hmac_key) != stored_hmac {
         return Err(Error::Encoding("header hmac mismatch".to_string()));
     }
     Ok(())

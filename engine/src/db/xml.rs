@@ -292,3 +292,170 @@ fn xml_unescape(s: &str) -> String {
         .replace("&apos;", "'")
         .replace("&amp;", "&")
 }
+
+// ---------------------------------------------------------------------------
+// Serialization
+
+use std::time::{SystemTime, UNIX_EPOCH};
+
+/// Offset between the Unix epoch (1970-01-01) and the .NET epoch (0001-01-01),
+/// in seconds.
+const DOT_NET_OFFSET: i64 = 62_135_596_800;
+
+/// Serializes a [`Vault`] into KDBX 4.x XML, protecting marked fields.
+pub fn serialize(
+    vault: &Vault,
+    stream: &mut ProtectedStream,
+    header_hash: &[u8; 32],
+) -> Result<Vec<u8>> {
+    let mut s = String::with_capacity(4096);
+    s.push_str("<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>\n");
+    s.push_str("<KeePassFile>\n");
+    write_meta(&mut s, vault, header_hash);
+    s.push_str("<Root>\n");
+    write_group(&mut s, &vault.root, stream)?;
+    s.push_str("<DeletedObjects/>\n");
+    s.push_str("</Root>\n");
+    s.push_str("</KeePassFile>\n");
+    Ok(s.into_bytes())
+}
+
+fn write_meta(s: &mut String, vault: &Vault, header_hash: &[u8; 32]) {
+    let now = dotnet_now();
+    s.push_str("<Meta>\n");
+    write_str_elem(s, "Generator", "OnePass");
+    write_b64_elem(s, "HeaderHash", header_hash);
+    write_str_elem(s, "DatabaseName", &vault.database_name);
+    write_date(s, "DatabaseNameChanged", now);
+    s.push_str("<DatabaseDescription/>\n");
+    write_date(s, "DatabaseDescriptionChanged", now);
+    s.push_str("<DefaultUserName/>\n");
+    write_date(s, "DefaultUserNameChanged", now);
+    s.push_str("<MaintenanceHistoryDays>365</MaintenanceHistoryDays>\n");
+    s.push_str("<Color/>\n");
+    write_date(s, "MasterKeyChanged", now);
+    s.push_str("<MasterKeyChangeRec>-1</MasterKeyChangeRec>\n");
+    s.push_str("<MasterKeyChangeForce>-1</MasterKeyChangeForce>\n");
+    s.push_str("<MemoryProtection>\n");
+    s.push_str("<ProtectTitle>False</ProtectTitle>\n");
+    s.push_str("<ProtectUserName>False</ProtectUserName>\n");
+    s.push_str("<ProtectPassword>True</ProtectPassword>\n");
+    s.push_str("<ProtectURL>False</ProtectURL>\n");
+    s.push_str("<ProtectNotes>False</ProtectNotes>\n");
+    s.push_str("</MemoryProtection>\n");
+    s.push_str("<CustomData/>\n");
+    s.push_str("</Meta>\n");
+}
+
+fn write_group(s: &mut String, g: &Group, stream: &mut ProtectedStream) -> Result<()> {
+    s.push_str("<Group>\n");
+    write_b64_elem(s, "UUID", &g.uuid);
+    write_str_elem(s, "Name", &g.name);
+    if g.notes.is_empty() {
+        s.push_str("<Notes/>\n");
+    } else {
+        write_str_elem(s, "Notes", &g.notes);
+    }
+    write_u32_elem(s, "IconID", 48);
+    write_times(s);
+    s.push_str("<IsExpanded>True</IsExpanded>\n");
+    for e in &g.entries {
+        write_entry(s, e, stream)?;
+    }
+    for sg in &g.groups {
+        write_group(s, sg, stream)?;
+    }
+    s.push_str("</Group>\n");
+    Ok(())
+}
+
+fn write_entry(s: &mut String, e: &Entry, stream: &mut ProtectedStream) -> Result<()> {
+    s.push_str("<Entry>\n");
+    write_b64_elem(s, "UUID", &e.uuid);
+    write_u32_elem(s, "IconID", e.icon_id);
+    s.push_str("<ForegroundColor/>\n");
+    s.push_str("<BackgroundColor/>\n");
+    s.push_str("<OverrideURL/>\n");
+    s.push_str("<Tags/>\n");
+    write_times(s);
+    for f in &e.fields {
+        s.push_str("<String>\n");
+        write_str_elem(s, "Key", &f.key);
+        s.push_str("<Value");
+        if f.protected {
+            s.push_str(" Protected=\"True\"");
+        }
+        s.push_str(">");
+        if f.protected {
+            let mut data = f.value.as_bytes().to_vec();
+            stream.xor_in_place(&mut data)?;
+            s.push_str(&b64(&data));
+        } else {
+            s.push_str(&esc(&f.value));
+        }
+        s.push_str("</Value>\n");
+        s.push_str("</String>\n");
+    }
+    s.push_str(
+        "<AutoType>\n<Enabled>True</Enabled>\n<DataTransferObfuscation>0</DataTransferObfuscation>\n<DefaultSequence/>\n</AutoType>\n",
+    );
+    s.push_str("<History/>\n");
+    s.push_str("</Entry>\n");
+    Ok(())
+}
+
+fn write_times(s: &mut String) {
+    let now = dotnet_now();
+    s.push_str("<Times>\n");
+    write_date(s, "LastModificationTime", now);
+    write_date(s, "CreationTime", now);
+    write_date(s, "LastAccessTime", now);
+    write_date(s, "ExpiryTime", now);
+    s.push_str("<Expires>False</Expires>\n");
+    s.push_str("<UsageCount>0</UsageCount>\n");
+    write_date(s, "LocationChanged", now);
+    s.push_str("</Times>\n");
+}
+
+fn dotnet_now() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+        + DOT_NET_OFFSET
+}
+
+fn write_date(s: &mut String, tag: &str, dotnet_secs: i64) {
+    write_b64_elem(s, tag, &dotnet_secs.to_le_bytes());
+}
+
+fn write_str_elem(s: &mut String, tag: &str, value: &str) {
+    s.push_str(&format!("<{tag}>{}</{tag}>\n", esc(value)));
+}
+
+fn write_b64_elem(s: &mut String, tag: &str, bytes: &[u8]) {
+    s.push_str(&format!("<{tag}>{}</{tag}>\n", b64(bytes)));
+}
+
+fn write_u32_elem(s: &mut String, tag: &str, value: u32) {
+    s.push_str(&format!("<{tag}>{value}</{tag}>\n"));
+}
+
+fn esc(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&apos;"),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+fn b64(bytes: &[u8]) -> String {
+    base64::engine::general_purpose::STANDARD.encode(bytes)
+}

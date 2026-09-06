@@ -14,5 +14,5 @@ pub use header::{Compression, KdbxHeader};
 pub use inner_header::InnerHeader;
 pub use kdf_params::{Argon2Variant, KdfParams};
 pub use stream::protected::{ProtectedStream, ProtectedStreamKind};
-pub use vault::open;
+pub use vault::{open, save};
 pub use xml::{Entry, Field, Group, Vault};

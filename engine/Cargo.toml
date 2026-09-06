@@ -21,6 +21,7 @@ salsa20 = "0.10"
 flate2 = "1"
 base64 = "0.22"
 quick-xml = "0.37"
+getrandom = "0.2"
 
 [profile.release]
 lto = true
