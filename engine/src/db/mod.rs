@@ -16,3 +16,11 @@ pub use kdf_params::{Argon2Variant, KdfParams};
 pub use stream::protected::{ProtectedStream, ProtectedStreamKind};
 pub use vault::{open, save};
 pub use xml::{Entry, Field, Group, Vault};
+
+/// Fills `len` bytes with cryptographically secure randomness.
+pub fn random_bytes(len: usize) -> crate::error::Result<Vec<u8>> {
+    let mut buf = vec![0u8; len];
+    getrandom::getrandom(&mut buf)
+        .map_err(|e| crate::error::Error::Encoding(format!("getrandom: {e}")))?;
+    Ok(buf)
+}
