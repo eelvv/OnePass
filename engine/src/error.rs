@@ -25,6 +25,8 @@ pub enum Error {
     InvalidCounter(u64),
     /// Malformed otpauth/motp URI.
     InvalidUri(String),
+    /// Key-derivation error (Argon2/AES-KDF).
+    Kdf(String),
     /// System clock error.
     Clock,
 }
@@ -44,6 +46,7 @@ impl fmt::Display for Error {
             Error::InvalidPeriod(p) => write!(f, "unsupported period: {p}"),
             Error::InvalidCounter(c) => write!(f, "unsupported counter: {c}"),
             Error::InvalidUri(msg) => write!(f, "invalid otp uri: {msg}"),
+            Error::Kdf(msg) => write!(f, "key derivation error: {msg}"),
             Error::Clock => write!(f, "system clock unavailable"),
         }
     }

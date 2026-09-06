@@ -8,6 +8,7 @@
 
 pub mod encoding;
 pub mod error;
+pub mod kdf;
 pub mod otp;
 pub mod uri;
 
