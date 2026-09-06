@@ -1,11 +1,12 @@
 # Reference projects (upstream open-source sources, only for functional reference)
 /reference/
 
-# Rust engine build artifacts
+# Rust build artifacts (workspace + legacy engine-local)
+/target/
 /engine/target/
 /engine/.cargo-home/
 # Machine-specific cargo mirror workaround (see engine/README.md)
-/engine/.cargo/config.toml
+/.cargo/config.toml
 
 # OS / editor
 .DS_Store

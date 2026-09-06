@@ -142,6 +142,25 @@ pub fn import_google_migration(uri_str: &str) -> Result<Vec<Entry>> {
     Ok(out)
 }
 
+/// Imports entries from raw bytes, auto-detecting the format (Aegis JSON,
+/// Google Authenticator migration URI, or an otpauth URI list).
+pub fn detect_and_import(data: &[u8]) -> Result<Vec<Entry>> {
+    let text = String::from_utf8_lossy(data).trim().to_string();
+    if text.starts_with('{') {
+        return import_aegis_json(data);
+    }
+    if text.starts_with("otpauth-migration://") {
+        return import_google_migration(&text);
+    }
+    if text.starts_with("otpauth://") {
+        return import_otpauth_uris(&text);
+    }
+    Err(Error::Encoding(
+        "unrecognized source format (expected Aegis JSON, otpauth URI list, or migration URI)"
+            .to_string(),
+    ))
+}
+
 fn aegis_entry_to_entry(value: &serde_json::Value) -> Result<Entry> {
     let kind_str = value
         .get("type")

@@ -73,3 +73,21 @@ fn yandex_uri_roundtrip_and_generate() {
     let p2 = uri::parse(&uri_str).unwrap();
     assert_eq!(p2.generate(1_700_000_000).unwrap(), "jjeghxtd");
 }
+
+#[test]
+fn generated_password_shape() {
+    for len in [8usize, 16, 20, 64] {
+        let p = onepass_engine::db::generate_password(len).unwrap();
+        assert_eq!(p.chars().count(), len, "len={len}");
+        assert!(
+            p.chars().all(|c| c.is_ascii_alphanumeric()
+                || "!@#$%^&*()-_=+[]{};:,.<>?".contains(c)),
+            "unexpected char in {p}"
+        );
+    }
+    // Two calls must (with overwhelming probability) differ.
+    assert_ne!(
+        onepass_engine::db::generate_password(20).unwrap(),
+        onepass_engine::db::generate_password(20).unwrap()
+    );
+}
