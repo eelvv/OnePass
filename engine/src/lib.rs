@@ -7,6 +7,7 @@
 //! Yandex.Key) are re-implemented here.
 
 pub mod cipher;
+pub mod db;
 pub mod encoding;
 pub mod error;
 pub mod kdf;
