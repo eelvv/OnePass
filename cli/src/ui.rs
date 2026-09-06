@@ -160,7 +160,11 @@ fn draw_details(f: &mut Frame, app: &mut App, area: Rect) {
             if let Some(params) = entry_otp(e) {
                 if let Ok(code) = params.generate(now_secs()) {
                     lines.push(Line::from("─".repeat(30)));
-                    let remain = seconds_remaining(params.period);
+                    let meta = if params.kind == onepass_engine::otp::OtpKind::Hotp {
+                        format!("HOTP counter={}", params.counter)
+                    } else {
+                        format!("{}s remaining", seconds_remaining(params.period))
+                    };
                     lines.push(Line::from(vec![
                         Span::styled("     OTP: ", Style::new().bold()),
                         Span::styled(
@@ -169,20 +173,7 @@ fn draw_details(f: &mut Frame, app: &mut App, area: Rect) {
                                 .fg(ratatui::style::Color::LightGreen)
                                 .add_modifier(Modifier::BOLD),
                         ),
-                        Span::raw(format!(
-                            "  ({}s{})",
-                            if params.kind == onepass_engine::otp::OtpKind::Hotp {
-                                format!("counter={}", params.counter)
-                            } else {
-                                format!("{remain}")
-                            },
-                            if app.reveal {
-                                let _ = &params; // secret shown below
-                                String::new()
-                            } else {
-                                String::new()
-                            }
-                        )),
+                        Span::raw(format!("  ({meta})")),
                     ]));
                     if app.reveal {
                         lines.push(Line::from(vec![
