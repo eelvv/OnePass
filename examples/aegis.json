@@ -1,0 +1,49 @@
+{
+  "db": {
+    "entries": [
+      {
+        "favorite": false,
+        "groups": [],
+        "icon": null,
+        "icon_hash": null,
+        "icon_mime": null,
+        "info": {
+          "algo": "SHA1",
+          "digits": 6,
+          "period": 30,
+          "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+        },
+        "issuer": "GitHub 2FA",
+        "name": "octocat@example.com",
+        "note": "2FA entry (TOTP/HOTP)",
+        "type": "totp",
+        "uuid": "f7d40fae-0bfe-3e63-f695-492d4ad82252"
+      },
+      {
+        "favorite": false,
+        "groups": [],
+        "icon": null,
+        "icon_hash": null,
+        "icon_mime": null,
+        "info": {
+          "algo": "SHA1",
+          "counter": 1,
+          "digits": 6,
+          "secret": "JBSWY3DPEHPK3PXP"
+        },
+        "issuer": "GitLab 2FA",
+        "name": "dev@example.com",
+        "note": "2FA entry (TOTP/HOTP)",
+        "type": "hotp",
+        "uuid": "01ba52f8-6157-a827-05c4-437b1496c4d2"
+      }
+    ],
+    "groups": [],
+    "version": 3
+  },
+  "header": {
+    "params": null,
+    "slots": null
+  },
+  "version": 1
+}

@@ -1,0 +1,2 @@
+otpauth://totp/GitHub%202FA:octocat%40example%2Ecom?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&digits=6&issuer=GitHub%202FA&algorithm=SHA1&period=30
+otpauth://hotp/GitLab%202FA:dev%40example%2Ecom?secret=JBSWY3DPEHPK3PXP&digits=6&issuer=GitLab%202FA&algorithm=SHA1&counter=1

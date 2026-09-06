@@ -1,6 +1,7 @@
 //! One-time password algorithms (HOTP/TOTP/Steam/MOTP/Yandex).
 
 pub mod hotp;
+pub mod migration;
 pub mod motp;
 pub mod steam;
 pub mod totp;

@@ -3,7 +3,10 @@
 //!
 //! Usage: cargo run --release --example create_demo -- [output] [password]
 
-use onepass_engine::db::{random_bytes, save, Entry, Field, Group, Vault};
+use onepass_engine::db::{
+    random_bytes, save, set_entry_otp, Entry, Field, Group, Vault,
+};
+use onepass_engine::otp::{HashAlgorithm, OtpKind, OtpParams};
 
 fn field(key: &str, value: &str, protected: bool) -> Field {
     Field {
@@ -25,6 +28,34 @@ fn entry(title: &str, username: &str, password: &str, url: &str, notes: &str) ->
     if !notes.is_empty() {
         e.fields.push(field("Notes", notes, false));
     }
+    e
+}
+
+fn otp_entry(title: &str, username: &str, secret_b32: &str, kind: OtpKind, counter: u64) -> Entry {
+    let mut e = entry(
+        title,
+        username,
+        "unused-password",
+        "",
+        "2FA entry (TOTP/HOTP)",
+    );
+    e.fields.retain(|f| f.key != "Password" && f.key != "URL");
+    set_entry_otp(
+        &mut e,
+        &OtpParams {
+            kind,
+            secret: onepass_engine::encoding::base32::decode_tolerant(secret_b32)
+                .expect("base32 secret"),
+            digits: if matches!(kind, OtpKind::Steam) { 5 } else { 6 },
+            period: 30,
+            algorithm: HashAlgorithm::Sha1,
+            issuer: title.to_string(),
+            account: username.to_string(),
+            counter,
+            pin: None,
+        },
+    )
+    .expect("set otp");
     e
 }
 
@@ -115,6 +146,22 @@ fn main() {
         "",
     ));
 
+    let mut twofa = group("2FA");
+    twofa.entries.push(otp_entry(
+        "GitHub 2FA",
+        "octocat@example.com",
+        "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", // "12345678901234567890"
+        OtpKind::Totp,
+        0,
+    ));
+    twofa.entries.push(otp_entry(
+        "GitLab 2FA",
+        "dev@example.com",
+        "JBSWY3DPEHPK3PXP", // "Hello!\xDE\xAD\xBE\xEF"
+        OtpKind::Hotp,
+        1,
+    ));
+
     let mut vault = Vault {
         database_name: "My Passwords".to_string(),
         root: Group {
@@ -127,11 +174,12 @@ fn main() {
     vault.root.groups.push(social);
     vault.root.groups.push(email);
     vault.root.groups.push(shopping);
+    vault.root.groups.push(twofa);
 
     let saved = save(&vault, password.as_bytes()).expect("save");
     std::fs::write(output, &saved).expect("write output");
     println!(
-        "Saved {} bytes to {output} (password: {password}, 4 groups, 9 entries)",
+        "Saved {} bytes to {output} (password: {password}, 5 groups, 11 entries incl. 2 OTP)",
         saved.len()
     );
 }
