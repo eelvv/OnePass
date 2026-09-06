@@ -120,10 +120,12 @@ impl KdbxHeader {
             } else {
                 read_u32(data, &mut pos)? as usize
             };
+            // KeePass writes the EndOfHeader field with 4 bytes of data
+            // ("\r\n\r\n"), so consume the field data for every field first.
+            let field_data = read_bytes(data, &mut pos, field_size)?.to_vec();
             if field_id == FIELD_END {
                 break;
             }
-            let field_data = read_bytes(data, &mut pos, field_size)?.to_vec();
 
             match field_id {
                 FIELD_CIPHER_ID => {
@@ -217,9 +219,10 @@ impl KdbxHeader {
             &self.stream_start_bytes,
             self.version,
         );
-        // EndOfHeader (0)
+        // EndOfHeader (0) — KeePass writes "\r\n\r\n" as the field data.
         out.push(FIELD_END);
-        push_size(&mut out, 0, self.version);
+        push_size(&mut out, 4, self.version);
+        out.extend_from_slice(b"\r\n\r\n");
 
         out
     }
@@ -361,7 +364,8 @@ mod tests {
         expected.extend_from_slice(&0u32.to_le_bytes());
         // EndOfHeader
         expected.push(FIELD_END);
-        expected.extend_from_slice(&0u32.to_le_bytes());
+        expected.extend_from_slice(&4u32.to_le_bytes());
+        expected.extend_from_slice(b"\r\n\r\n");
 
         let (parsed, consumed) = KdbxHeader::parse(&expected).unwrap();
         assert_eq!(consumed, expected.len());
