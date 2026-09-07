@@ -20,15 +20,12 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact: onepass-cli-linux-x86_64.tar.gz
-            strip: true
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact: onepass-cli-macos-aarch64.tar.gz
-            strip: true
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact: onepass-cli-windows-x86_64.zip
-            strip: false
+            artifact: onepass-cli-windows-x86_64.tar.gz
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -41,36 +38,27 @@ jobs:
       - name: Build release binary
         run: cargo build --release --bin onepass-cli --target ${{ matrix.target }}
 
-      - name: Stage artifacts
+      - name: Stage artifact
         shell: bash
         run: |
-          BINARY=target/${{ matrix.target }}/release/onepass-cli
-          [ "${{ runner.os }}" = "Windows" ] && BINARY="$BINARY.exe"
+          ARTIFACT="${{ matrix.artifact }}"
+          BINARY="target/${{ matrix.target }}/release/onepass-cli"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            BINARY="$BINARY.exe"
+          fi
 
-          NAME="${{ matrix.artifact%.tar.gz}"
-          NAME="${NAME%.zip}"
-
-          STAGING=staging/$NAME
+          NAME="${ARTIFACT%.tar.gz}"
+          STAGING="staging/$NAME"
           mkdir -p "$STAGING"
           cp "$BINARY" "$STAGING/onepass-cli"
           chmod +x "$STAGING/onepass-cli"
 
-          if [[ ${{ matrix.strip }} == "true" ]]; then
-            if command -v strip &>/dev/null; then
-              strip "$STAGING/onepass-cli" || true
-            fi
+          # Strip if available (skip on Windows; not needed)
+          if [ "$RUNNER_OS" != "Windows" ]; then
+            command -v strip >/dev/null 2>&1 && strip "$STAGING/onepass-cli" || true
           fi
 
-          case ${{ matrix.artifact }} in
-            *.tar.gz)
-              tar -czf "${{ matrix.artifact }}" -C staging "$NAME"
-              ;;
-            *.zip)
-              pushd staging > /dev/null
-              zip -r -X "../${{ matrix.artifact }}" "$NAME"
-              popd > /dev/null
-              ;;
-          esac
+          tar -czf "$ARTIFACT" -C staging "$NAME"
           rm -rf staging
 
       - name: Upload to release
