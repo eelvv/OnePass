@@ -257,18 +257,19 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
 
 #[allow(dead_code)]
 fn search_popup(f: &mut Frame, app: &App) {
-    let area = centered_rect(70, 18, f.area());
+    let area = input_box(70, f.area());
     f.render_widget(Clear, area);
-    let text = Paragraph::new(format!("{}█  (live filter, Enter/Esc to close)", app.input)).block(
+    let text = Paragraph::new(format!("{}█", app.input)).block(
         Block::new()
             .borders(Borders::ALL)
             .title(Span::styled(" Search ", Style::new().bold())),
     );
+    // Footer hint in a second line inside the box for visibility.
     f.render_widget(text, area);
 }
 
 fn input_path_popup(f: &mut Frame, app: &App) {
-    let area = centered_rect(70, 18, f.area());
+    let area = input_box(70, f.area());
     f.render_widget(Clear, area);
     let title = match app.input_action {
         Some(PathAction::Import) => "Import — file path (Aegis JSON / URI list / migration URI)",
@@ -578,6 +579,22 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
     hx
 }
 
+/// Fixed 3-line centered box: top border + 1 content line + bottom border.
+fn input_box(width_pct: u16, r: Rect) -> Rect {
+    let [_, v_box, _] = Layout::vertical([
+        Constraint::Length(2),
+        Constraint::Length(3),
+        Constraint::Length(2),
+    ])
+    .areas(r);
+    let [_, h_box, _] = Layout::horizontal([
+        Constraint::Percentage((100 - width_pct) / 2),
+        Constraint::Percentage(width_pct),
+        Constraint::Percentage((100 - width_pct) / 2),
+    ])
+    .areas(v_box);
+    h_box
+}
 fn count_entries(g: &onepass_engine::db::Group) -> usize {
     g.entries.len() + g.groups.iter().map(count_entries).sum::<usize>()
 }
