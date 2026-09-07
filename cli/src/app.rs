@@ -406,19 +406,19 @@ impl App {
 
     fn do_export(&mut self, path: &str) -> Result<String, onepass_engine::Error> {
         let entries = otp_entries(&self.vault);
-        let refs: Vec<&Entry> = entries.iter().copied().collect();
         let data = if path.ends_with(".json") {
-            export_aegis_json(&refs)?
+            export_aegis_json(&entries)?
         } else {
-            export_otpauth_uris(&refs)?.into_bytes()
+            export_otpauth_uris(&entries)?.into_bytes()
         };
         fs::write(path, data)
             .map_err(|e| onepass_engine::Error::Encoding(format!("write {path}: {e}")))?;
-        Ok(format!("Exported {} OTP entries to {path}", refs.len()))
+        Ok(format!("Exported {} OTP entries to {path}", entries.len()))
     }
 
     /// Adds an OTP entry from a pasted otpauth URI (used by the AddOtp mode).
     #[allow(dead_code)]
+    #[allow(clippy::too_many_arguments)]
     fn add_otp_manual(
         &mut self,
         issuer: &str,
