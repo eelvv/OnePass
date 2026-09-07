@@ -430,7 +430,7 @@ impl App {
             KeyCode::BackTab | KeyCode::Up => {
                 self.form.field = (self.form.field + total - 1) % total;
             }
-            KeyCode::Left if self.form.field == 0 => {
+            KeyCode::Left if self.form.field == 0 && self.form.editing_uuid.is_none() => {
                 self.form.kind = match self.form.kind {
                     AddFormKind::Password => AddFormKind::TwoFa,
                     AddFormKind::TwoFa => AddFormKind::Password,

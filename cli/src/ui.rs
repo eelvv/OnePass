@@ -43,8 +43,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         Mode::ChangePassword => change_password_popup(f, app),
         Mode::Help => help_popup(f, app),
         Mode::DetailsEdit => {
-            // Inline edit is handled directly in the details panel (Enter opens edit);
-            // no extra centered popup needed — the details panel itself is the editor.
+            // Rendered inline in draw_details (field shows input buffer + cursor).
         }
         Mode::Normal => {}
     }
@@ -180,12 +179,18 @@ fn draw_details(f: &mut Frame, app: &mut App, area: Rect) {
     row_index += 1;
 
     for field in &entry.fields {
-        let shown = if field.protected && !app.reveal {
+        let editing_this = app.mode == Mode::DetailsEdit && row_index == app.detail_field;
+        let shown = if editing_this {
+            // Show the live edit buffer with a cursor.
+            format!("{}█", app.input)
+        } else if field.protected && !app.reveal {
             "•".repeat(field.value.len().min(24))
         } else {
             field.value.clone()
         };
-        let value_style = if field.protected && !app.reveal {
+        let value_style = if editing_this {
+            Style::new().fg(ratatui::style::Color::Yellow).bold()
+        } else if field.protected && !app.reveal {
             Style::new().fg(ratatui::style::Color::DarkGray)
         } else if field.protected {
             Style::new().fg(ratatui::style::Color::LightRed).bold()
