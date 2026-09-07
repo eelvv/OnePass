@@ -257,7 +257,7 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
 
 #[allow(dead_code)]
 fn search_popup(f: &mut Frame, app: &App) {
-    let area = centered_rect(70, 8, f.area());
+    let area = centered_rect(70, 18, f.area());
     f.render_widget(Clear, area);
     let text = Paragraph::new(format!("{}█  (live filter, Enter/Esc to close)", app.input)).block(
         Block::new()
@@ -268,7 +268,7 @@ fn search_popup(f: &mut Frame, app: &App) {
 }
 
 fn input_path_popup(f: &mut Frame, app: &App) {
-    let area = centered_rect(70, 8, f.area());
+    let area = centered_rect(70, 18, f.area());
     f.render_widget(Clear, area);
     let title = match app.input_action {
         Some(PathAction::Import) => "Import — file path (Aegis JSON / URI list / migration URI)",
