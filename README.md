@@ -43,7 +43,7 @@ TUI 按键：
 | `/` | search过滤 |
 | `r` | reveal/hide密码与 OTP secret |
 | `i` / `e` | import / export 2FA（Aegis JSON、URI 列表） |
-| `q` | quit（有未save修改会确认；正常quit自动save） |
+| `q` | quit (unsaved changes will confirm; clean exit auto-saves) |
 
 ## 示例程序（engine）
 
