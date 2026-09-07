@@ -271,9 +271,10 @@ impl App {
                 return;
             }
             KeyCode::F(5) => {
-                // Codes are derived from the clock on every draw; this just
-                // acknowledges the refresh so the countdown visibly restarts.
                 self.message = Some("OTP refreshed".to_string());
+                if self.reveal {
+                    self.reveal_until = Some(Instant::now() + Duration::from_secs(REVEAL_SECS));
+                }
                 return;
             }
             KeyCode::Char('r') => return self.toggle_reveal(),
