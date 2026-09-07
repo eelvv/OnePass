@@ -36,13 +36,12 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     // Modal popups.
     match app.mode {
-        Mode::Search => search_popup(f, app),
         Mode::InputPath => input_path_popup(f, app),
         Mode::AddEntry => form_popup(f, app),
         Mode::Confirm => confirm_popup(f, app),
         Mode::ChangePassword => change_password_popup(f, app),
         Mode::Help => help_popup(f, app),
-        Mode::Normal => {}
+        Mode::Search | Mode::Normal => {}
     }
 }
 
@@ -51,7 +50,7 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
     let marked = if app.marked.is_empty() {
         String::new()
     } else {
-        format!("  ☑{}", app.marked.len())
+        format!("  [x{}]", app.marked.len())
     };
     let filter = if app.filter.is_empty() {
         String::new()
@@ -110,9 +109,7 @@ fn draw_list(f: &mut Frame, app: &mut App, area: Rect) {
         Constraint::Min(12),
         Constraint::Min(14),
     ];
-    let title = if app.mode == Mode::Search {
-        format!(" Entries — search: {}█ ", app.input)
-    } else if !app.filter.is_empty() {
+    let title = if !app.filter.is_empty() {
         format!(" Entries — filter: {} ", app.filter)
     } else {
         " Entries ".to_string()
@@ -238,25 +235,34 @@ fn draw_details(f: &mut Frame, app: &mut App, area: Rect) {
 
 fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
     let msg = app.message.clone().unwrap_or_default();
-    let panel_hint = match app.panel {
-        Panel::List => " List: Spacemulti-select / aadd / tadd2FA / ddelete / Tabswitch Details ",
-        Panel::Details => " Details: j/knavigate / ccopy / vpaste / Enteredit / Tabswitch List ",
-    };
-    let common = " s save │ / search │ i import │ e export │ r reveal/hide │ ? help │ q quit ";
-    let text = format!("{panel_hint}{common}");
-    let line = if msg.is_empty() {
-        Line::from(Span::styled(text, Style::new().dim()))
+    let line = if app.mode == Mode::Search {
+        Line::from(vec![
+            Span::styled(" Search: ", Style::new().bold()),
+            Span::styled(app.input.clone(), Style::new()),
+            Span::styled("█", Style::new().fg(ratatui::style::Color::Cyan)),
+        ])
     } else {
-        Line::from(Span::styled(
-            format!(" {msg} "),
-            Style::new()
-                .fg(ratatui::style::Color::Black)
-                .bg(ratatui::style::Color::Yellow),
-        ))
+        let panel_hint = match app.panel {
+            Panel::List => " List: Space multi / a add / d delete / Tab Details ",
+            Panel::Details => " Details: j/k navigate / c copy / v paste / Enter edit / Tab List ",
+        };
+        let common = " s save | / search | i import | e export | r reveal | ? help | q quit ";
+        let text = format!("{panel_hint}| {common}");
+        if msg.is_empty() {
+            Line::from(Span::styled(text, Style::new().dim()))
+        } else {
+            Line::from(Span::styled(
+                format!(" {msg} "),
+                Style::new()
+                    .fg(ratatui::style::Color::Black)
+                    .bg(ratatui::style::Color::Yellow),
+            ))
+        }
     };
     f.render_widget(Paragraph::new(line), area);
 }
 
+#[allow(dead_code)]
 fn search_popup(f: &mut Frame, app: &App) {
     let area = centered_rect(70, 8, f.area());
     f.render_widget(Clear, area);
