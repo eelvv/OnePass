@@ -4,6 +4,10 @@ version.workspace = true
 edition.workspace = true
 description = "Interactive TUI password manager + 2FA console over the OnePass engine"
 
+[lib]
+name = "onepass_cli"
+path = "src/lib.rs"
+
 [[bin]]
 name = "onepass-cli"
 path = "src/main.rs"
@@ -14,3 +18,4 @@ ratatui = "0.29"
 crossterm = "0.28"
 rpassword = "7"
 unicode-width = "0.2"
+arboard = "3"
