@@ -341,14 +341,14 @@ fn help_popup(f: &mut Frame, app: &App) {
             vec![
                 ("Tab", "switch List / Details panel"),
                 ("?", "open / close this help"),
-                ("s", "save当前库到磁盘"),
+                ("s", "save vault to disk"),
                 ("P", "change master password (in memory; press s to write)"),
-                ("q", "quit（未save会确认）"),
+                ("q", "quit (unsaved changes confirm; clean exit saves)"),
                 ("Esc", "clear filter / return to Normal"),
             ],
         ),
         (
-            "List 面板",
+            "List Panel",
             vec![
                 ("j/k", "navigate up/down"),
                 ("g/G", "jump to top / bottom"),
@@ -356,23 +356,23 @@ fn help_popup(f: &mut Frame, app: &App) {
                 ("a", "add password entry"),
                 ("t", "add 2FA entry"),
                 ("d", "delete current / all marked entries"),
-                ("Enter", "edit当前条目"),
+                ("Enter", "edit selected entry"),
                 ("u / p / U / o", "copy username / password / URL / OTP code"),
                 ("r", "reveal/hide password (auto-hide 15s)"),
             ],
         ),
         (
-            "Details 面板",
+            "Details Panel",
             vec![
                 ("j/k", "navigate fields"),
-                ("c", "copy当前字段到剪贴板"),
+                ("c", "copy current field to clipboard"),
                 ("v", "paste clipboard content"),
                 ("Enter", "switch to List and edit selected entry"),
                 ("r", "reveal/hide password"),
             ],
         ),
         (
-            "筛选 / import / export",
+            "Filter / Import / Export",
             vec![
                 ("/", "start live filter search"),
                 ("i", "import 2FA (Aegis JSON / URI list / Google migration)"),
@@ -475,9 +475,9 @@ fn form_popup(f: &mut Frame, app: &App) {
 
     lines.push(Line::from(""));
     let hint = match form.kind {
-        AddFormKind::Password => "Tab/Up/Down navigate fields · Enter 提交 · Esc 取消",
+        AddFormKind::Password => "Tab/Up/Down navigate | Enter submit | Esc cancel",
         AddFormKind::TwoFa => {
-            "Tab/Up/Down navigate fields · ←→ select Type and Kind with arrows · Enter 提交 · Esc 取消"
+            "Tab/Up/Down navigate | ←→ select Type/Kind | Enter submit | Esc cancel"
         }
     };
     lines.push(Line::from(Span::styled(hint, Style::new().dim())));
