@@ -686,7 +686,7 @@ impl App {
         let Some(entry) = self.selected_entry() else {
             return;
         };
-        let rows = self.details_row_count();
+        let _rows = self.details_row_count();
         let value = if self.detail_field < entry.fields.len() {
             entry.fields[self.detail_field].value.clone()
         } else {
