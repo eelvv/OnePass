@@ -8,7 +8,7 @@ pub mod totp;
 pub mod types;
 pub mod yandex;
 
-pub use types::{HashAlgorithm, OtpKind, OtpParams};
+pub use types::{HashAlgorithm, OtpKind, OtpParams, DEFAULT_DIGITS, DEFAULT_PERIOD};
 
 /// Generates a code for `params` at `time_secs` (UNIX seconds).
 ///

@@ -8,6 +8,7 @@
 //! countdown, and import/export.
 
 mod app;
+mod clipboard;
 mod ui;
 
 use std::path::Path;
