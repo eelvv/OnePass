@@ -418,36 +418,35 @@ fn help_popup(f: &mut Frame, app: &App) {
 fn form_popup(f: &mut Frame, app: &App) {
     let area = centered_rect(72, 60, f.area());
     f.render_widget(Clear, area);
-    let mut lines: Vec<Line> = Vec::new();
-    let form = &app.form;
-    let editing = if form.editing_uuid.is_some() {
-        "Edit"
-    } else {
-        "Add"
-    };
-    let _kind_label = match form.kind {
-        AddFormKind::Password => "Password",
-        AddFormKind::TwoFa => "2FA",
-    };
-    lines.push(Line::from(Span::styled(
-        format!(" {editing} entry "),
-        Style::new().bold().fg(ratatui::style::Color::Cyan),
-    )));
-    lines.push(Line::from(""));
+    // Split popup vertically: form fields (top) and fixed hint footer (bottom).
+    let is_edit = app.form.editing_uuid.is_some();
+    let block_outer = Block::new().borders(Borders::ALL).title(Span::styled(
+        format!(" {} Entry ", if is_edit { "Edit" } else { "Add" }),
+        Style::new().bold(),
+    ));
+    let inner = block_outer.inner(area);
+    f.render_widget(block_outer, area);
 
+    let [fields_area, hint_area] =
+        Layout::vertical([Constraint::Min(8), Constraint::Length(2)]).areas(inner);
+
+    let form = &app.form;
+    let mut lines: Vec<Line> = Vec::new();
+
+    // Body rows (type selector + fields).
     // Row 0: type selector.
     let selector_left = if form.field == 0 { " ▸ " } else { "   " };
     let type_display = match form.kind {
         AddFormKind::Password => {
             if form.field == 0 {
-                "Password ← → 2FA"
+                "Password \u{2190} \u{2192} 2FA"
             } else {
                 "Password"
             }
         }
         AddFormKind::TwoFa => {
             if form.field == 0 {
-                "Password ← → 2FA"
+                "Password \u{2190} \u{2192} 2FA"
             } else {
                 "2FA"
             }
@@ -467,26 +466,28 @@ fn form_popup(f: &mut Frame, app: &App) {
     ]));
     lines.push(Line::from(""));
 
-    // Body rows.
     match form.kind {
         AddFormKind::Password => render_password_fields(&mut lines, form),
         AddFormKind::TwoFa => render_twofa_fields(&mut lines, form),
     }
 
-    lines.push(Line::from(""));
+    // Render the scrollable field list to the top area.
+    f.render_widget(Paragraph::new(lines), fields_area);
+
+    // Render the fixed hint footer to the bottom area, always visible.
     let hint = match form.kind {
         AddFormKind::Password => "Tab/Up/Down navigate | Enter submit | Esc cancel",
         AddFormKind::TwoFa => {
-            "Tab/Up/Down navigate | ←→ select Type/Kind | Enter submit | Esc cancel"
+            "Tab/Up/Down navigate | \u{2190}\u{2192} select Type/Kind | Enter submit | Esc cancel"
         }
     };
-    lines.push(Line::from(Span::styled(hint, Style::new().dim())));
-
-    let block = Block::new().borders(Borders::ALL).title(Span::styled(
-        format!(" {editing} Entry "),
-        Style::new().bold(),
-    ));
-    f.render_widget(Paragraph::new(lines).block(block), area);
+    let hint_block = Block::new()
+        .borders(Borders::TOP)
+        .title(Span::styled(" Keys ", Style::new().dim()));
+    f.render_widget(
+        Paragraph::new(Span::styled(hint, Style::new().dim())).block(hint_block),
+        hint_area,
+    );
 }
 
 fn render_password_fields(lines: &mut Vec<Line>, form: &AddForm) {
