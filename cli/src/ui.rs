@@ -42,6 +42,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         Mode::Confirm => confirm_popup(f, app),
         Mode::ChangePassword => change_password_popup(f, app),
         Mode::Help => help_popup(f, app),
+        Mode::DetailsEdit => {
+            // Inline edit is handled directly in the details panel (Enter opens edit);
+            // no extra centered popup needed — the details panel itself is the editor.
+        }
         Mode::Normal => {}
     }
 }
