@@ -47,7 +47,10 @@ pub fn parse(uri: &str) -> Result<OtpParams> {
         None => OtpKind::Motp,
     };
 
-    let mut params = OtpParams { kind, ..Default::default() };
+    let mut params = OtpParams {
+        kind,
+        ..Default::default()
+    };
 
     // --- secret ---------------------------------------------------------
     let secret_param = query
