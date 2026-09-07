@@ -23,7 +23,11 @@ pub fn block_key(block_index: u64, hmac_key: &[u8; 64]) -> [u8; 64] {
 
 /// Encodes data into an HMAC-block stream (including the terminating block).
 pub fn encode(data: &[u8], hmac_key: &[u8; 64], block_size: usize) -> Vec<u8> {
-    let bs = if block_size == 0 { DEFAULT_BLOCK_SIZE } else { block_size };
+    let bs = if block_size == 0 {
+        DEFAULT_BLOCK_SIZE
+    } else {
+        block_size
+    };
     let mut out = Vec::new();
     let mut index = 0u64;
     if data.is_empty() {
@@ -56,7 +60,9 @@ pub fn decode(data: &[u8], hmac_key: &[u8; 64]) -> Result<Vec<u8>> {
         mac.update(block);
         let computed = mac.finalize().into_bytes();
         if computed.as_slice() != stored {
-            return Err(Error::Encoding("HMAC block verification failed".to_string()));
+            return Err(Error::Encoding(
+                "HMAC block verification failed".to_string(),
+            ));
         }
 
         index += 1;

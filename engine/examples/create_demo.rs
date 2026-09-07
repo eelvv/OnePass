@@ -3,9 +3,7 @@
 //!
 //! Usage: cargo run --release --example create_demo -- [output] [password]
 
-use onepass_engine::db::{
-    random_bytes, save, set_entry_otp, Entry, Field, Group, Vault,
-};
+use onepass_engine::db::{random_bytes, save, set_entry_otp, Entry, Field, Group, Vault};
 use onepass_engine::otp::{HashAlgorithm, OtpKind, OtpParams};
 
 fn field(key: &str, value: &str, protected: bool) -> Field {

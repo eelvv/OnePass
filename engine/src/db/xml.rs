@@ -265,9 +265,9 @@ impl Parser<'_> {
 }
 
 fn has_protected(e: &BytesStart) -> bool {
-    e.attributes().flatten().any(|attr| {
-        attr.key.as_ref() == b"Protected" && attr.value.as_ref() == b"True"
-    })
+    e.attributes()
+        .flatten()
+        .any(|attr| attr.key.as_ref() == b"Protected" && attr.value.as_ref() == b"True")
 }
 
 fn decode_text(bytes: &[u8]) -> String {

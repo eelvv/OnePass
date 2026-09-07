@@ -9,13 +9,7 @@ use crate::error::{Error, Result};
 use md5::{Digest, Md5};
 
 /// Generates a MOTP code (hex digits) at `time_secs`.
-pub fn motp(
-    secret: &[u8],
-    pin: &str,
-    period: u64,
-    digits: u32,
-    time_secs: u64,
-) -> Result<String> {
+pub fn motp(secret: &[u8], pin: &str, period: u64, digits: u32, time_secs: u64) -> Result<String> {
     if period == 0 {
         return Err(Error::InvalidPeriod(period));
     }
@@ -23,7 +17,9 @@ pub fn motp(
     let input = format!("{counter}{}{pin}", hex::encode(secret));
     let digest = Md5::digest(input.as_bytes());
     let hex_digest = hex::encode(&digest);
-    let n = usize::try_from(digits).unwrap_or(usize::MAX).min(hex_digest.len());
+    let n = usize::try_from(digits)
+        .unwrap_or(usize::MAX)
+        .min(hex_digest.len());
     Ok(hex_digest[..n].to_string())
 }
 

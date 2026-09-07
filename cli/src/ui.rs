@@ -5,9 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Modifier, Style, Stylize};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{
-    Block, Borders, Cell, Clear, Gauge, Paragraph, Row, Table, TableState,
-};
+use ratatui::widgets::{Block, Borders, Cell, Clear, Gauge, Paragraph, Row, Table, TableState};
 use ratatui::Frame;
 
 use crate::app::{seconds_remaining, App, Mode, PathAction};
@@ -60,7 +58,13 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
         format!("  filter: {}", app.filter)
     };
     let line = Line::from(vec![
-        Span::styled(" OnePass ", Style::new().bold().bg(ratatui::style::Color::Cyan).fg(ratatui::style::Color::Black)),
+        Span::styled(
+            " OnePass ",
+            Style::new()
+                .bold()
+                .bg(ratatui::style::Color::Cyan)
+                .fg(ratatui::style::Color::Black),
+        ),
         Span::raw(format!(
             " {}{} — {} entries{} ",
             app.file,
@@ -126,7 +130,9 @@ fn draw_list(f: &mut Frame, app: &mut App, area: Rect) {
         )
         .block(Block::new().borders(Borders::ALL).title(title))
         .row_highlight_style(
-            Style::new().bg(ratatui::style::Color::DarkGray).add_modifier(Modifier::BOLD),
+            Style::new()
+                .bg(ratatui::style::Color::DarkGray)
+                .add_modifier(Modifier::BOLD),
         )
         .column_spacing(1);
 
@@ -194,10 +200,7 @@ fn draw_details(f: &mut Frame, app: &mut App, area: Rect) {
 
     let block = Block::new()
         .borders(Borders::ALL)
-        .title(Span::styled(
-            " Details ",
-            Style::new().bold(),
-        ));
+        .title(Span::styled(" Details ", Style::new().bold()));
     f.render_widget(Paragraph::new(lines).block(block), area);
 }
 
@@ -207,7 +210,12 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
     let line = if msg.is_empty() {
         Line::from(Span::styled(help, Style::new().dim()))
     } else {
-        Line::from(Span::styled(format!(" {msg} "), Style::new().fg(ratatui::style::Color::Black).bg(ratatui::style::Color::Yellow)))
+        Line::from(Span::styled(
+            format!(" {msg} "),
+            Style::new()
+                .fg(ratatui::style::Color::Black)
+                .bg(ratatui::style::Color::Yellow),
+        ))
     };
     f.render_widget(Paragraph::new(line), area);
 }
@@ -231,9 +239,10 @@ fn confirm_popup(f: &mut Frame, app: &App) {
         }
         _ => "Delete the selected entry?\n\n  [y] delete    [n/Esc] cancel",
     };
-    let block = Block::new()
-        .borders(Borders::ALL)
-        .title(Span::styled(" Confirm ", Style::new().bold().fg(ratatui::style::Color::Yellow)));
+    let block = Block::new().borders(Borders::ALL).title(Span::styled(
+        " Confirm ",
+        Style::new().bold().fg(ratatui::style::Color::Yellow),
+    ));
     f.render_widget(Paragraph::new(text).block(block), area);
 }
 
@@ -264,14 +273,22 @@ fn form_popup(f: &mut Frame, app: &App) {
             value.as_str().to_string()
         };
         let style = if selected {
-            Style::new().bg(ratatui::style::Color::DarkGray).add_modifier(Modifier::BOLD)
+            Style::new()
+                .bg(ratatui::style::Color::DarkGray)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::new()
         };
         lines.push(Line::from(vec![
             Span::styled(format!(" {:<9}: ", name), style),
             Span::styled(
-                if shown.is_empty() && selected { "█".to_string() } else if shown.is_empty() { "—".to_string() } else { shown },
+                if shown.is_empty() && selected {
+                    "█".to_string()
+                } else if shown.is_empty() {
+                    "—".to_string()
+                } else {
+                    shown
+                },
                 style,
             ),
         ]));
@@ -305,8 +322,7 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 }
 
 fn count_entries(g: &onepass_engine::db::Group) -> usize {
-    g.entries.len()
-        + g.groups.iter().map(count_entries).sum::<usize>()
+    g.entries.len() + g.groups.iter().map(count_entries).sum::<usize>()
 }
 
 fn now_secs() -> u64 {
@@ -320,7 +336,11 @@ fn now_secs() -> u64 {
 #[allow(dead_code)]
 fn otp_gauge(f: &mut Frame, area: Rect, period: u64) {
     let remain = seconds_remaining(period);
-    let ratio = if period == 0 { 0.0 } else { remain as f64 / period as f64 };
+    let ratio = if period == 0 {
+        0.0
+    } else {
+        remain as f64 / period as f64
+    };
     let gauge = Gauge::default()
         .gauge_style(Style::new().fg(ratatui::style::Color::LightGreen))
         .ratio(ratio);

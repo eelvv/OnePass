@@ -8,11 +8,16 @@
 //!   <outdir>/aegis.json         (Aegis plaintext vault)
 //!   <outdir>/google-migration.txt (Google Authenticator migration URI)
 
-use onepass_engine::db::{open, otp_entries, export_aegis_json, export_google_migration, export_otpauth_uris};
+use onepass_engine::db::{
+    export_aegis_json, export_google_migration, export_otpauth_uris, open, otp_entries,
+};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let input = args.get(1).map(|s| s.as_str()).unwrap_or("../examples/output.kdbx");
+    let input = args
+        .get(1)
+        .map(|s| s.as_str())
+        .unwrap_or("../examples/output.kdbx");
     let password = args.get(2).map(|s| s.as_str()).unwrap_or("example1");
     let outdir = args.get(3).map(|s| s.as_str()).unwrap_or("../examples");
 

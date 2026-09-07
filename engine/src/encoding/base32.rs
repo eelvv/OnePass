@@ -51,11 +51,7 @@ pub fn decode(input: &str) -> Result<Vec<u8>> {
         let value: u32 = match upper {
             'A'..='Z' => u32::from(upper) - u32::from('A'),
             '2'..='7' => u32::from(upper) - u32::from('2') + 26,
-            _ => {
-                return Err(Error::Encoding(format!(
-                    "invalid base32 character: {ch}"
-                )))
-            }
+            _ => return Err(Error::Encoding(format!("invalid base32 character: {ch}"))),
         };
         buffer = (buffer << 5) | value;
         bits += 5;
@@ -116,10 +112,7 @@ mod tests {
 
     #[test]
     fn tolerant_drops_whitespace_and_dashes() {
-        assert_eq!(
-            decode_tolerant("MZ XW-6YTB").unwrap(),
-            b"fooba"
-        );
+        assert_eq!(decode_tolerant("MZ XW-6YTB").unwrap(), b"fooba");
     }
 
     #[test]

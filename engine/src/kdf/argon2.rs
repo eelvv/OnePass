@@ -39,9 +39,7 @@ pub fn transform_argon2(
     let version = match version {
         0x10 => Version::V0x10,
         0x13 => Version::V0x13,
-        v => {
-            return Err(Error::Kdf(format!("unsupported argon2 version 0x{v:x}")))
-        }
+        v => return Err(Error::Kdf(format!("unsupported argon2 version 0x{v:x}"))),
     };
     let params = Params::new(memory_kib, iterations, parallelism, Some(32))
         .map_err(|e| Error::Kdf(e.to_string()))?;

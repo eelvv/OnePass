@@ -3,7 +3,7 @@
 
 use onepass_engine::db::{
     entry_from_otpauth_uri, entry_otp, entry_otp_code, export_aegis_json, export_otpauth_uris,
-    import_aegis_json, import_google_migration, import_otpauth_uris, otp_entries, open,
+    import_aegis_json, import_google_migration, import_otpauth_uris, open, otp_entries,
     random_bytes, save, Entry, Group, Vault,
 };
 use onepass_engine::encoding::base32;
@@ -75,9 +75,7 @@ fn migration_uri_roundtrip() {
 #[test]
 fn add_from_otpauth_uri() {
     let b32 = base32::encode(SECRET);
-    let uri = format!(
-        "otpauth://totp/GitHub:alice?secret={b32}&digits=8&period=30&issuer=GitHub"
-    );
+    let uri = format!("otpauth://totp/GitHub:alice?secret={b32}&digits=8&period=30&issuer=GitHub");
     let entry = entry_from_otpauth_uri(&uri).unwrap();
     assert_eq!(entry.title(), Some("GitHub"));
     assert_eq!(entry.username(), Some("alice"));
@@ -161,10 +159,9 @@ fn aegis_json_roundtrip() {
 
 #[test]
 fn google_migration_import() {
-    let uri = onepass_engine::otp::migration::build_migration_uri(&[migration_entry(
-        &totp_params(),
-    )])
-    .unwrap();
+    let uri =
+        onepass_engine::otp::migration::build_migration_uri(&[migration_entry(&totp_params())])
+            .unwrap();
     let imported = import_google_migration(&uri).unwrap();
     assert_eq!(imported.len(), 1);
     assert_eq!(imported[0].title(), Some("GitHub"));
@@ -176,9 +173,7 @@ fn google_migration_import() {
 #[test]
 fn imported_entries_survive_save_open() {
     let b32 = base32::encode(SECRET);
-    let uri = format!(
-        "otpauth://totp/GitHub:alice?secret={b32}&digits=8&issuer=GitHub"
-    );
+    let uri = format!("otpauth://totp/GitHub:alice?secret={b32}&digits=8&issuer=GitHub");
     let entry = entry_from_otpauth_uri(&uri).unwrap();
 
     let vault = Vault {

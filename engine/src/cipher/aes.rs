@@ -48,7 +48,8 @@ mod tests {
     // NIST SP 800-38A F.2.5 (CBC-AES256) known-answer test.
     #[test]
     fn nist_cbc_aes256() {
-        let key = hex::decode("603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4").unwrap();
+        let key = hex::decode("603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4")
+            .unwrap();
         let iv = hex::decode("000102030405060708090a0b0c0d0e0f").unwrap();
         let pt = hex::decode(
             "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e51\

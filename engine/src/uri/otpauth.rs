@@ -37,11 +37,7 @@ pub fn parse(uri: &str) -> Result<OtpParams> {
             let (path, query) = split_path_query(rest);
             (None, path, query)
         }
-        other => {
-            return Err(Error::InvalidUri(format!(
-                "unsupported scheme: {other}"
-            )))
-        }
+        other => return Err(Error::InvalidUri(format!("unsupported scheme: {other}"))),
     };
 
     let query = parse_query(query);
@@ -208,12 +204,10 @@ pub fn build(params: &OtpParams) -> Result<String> {
             q.push_str(&format!("&pin={}", base32::encode(pin.as_bytes())));
             Ok(format!("{OTPAUTH_SCHEME}://yaotp/{label}?{q}"))
         }
-        OtpKind::Motp => {
-            Ok(format!(
-                "{MOTP_SCHEME}:/{label}?secret={}",
-                hex::encode(&params.secret)
-            ))
-        }
+        OtpKind::Motp => Ok(format!(
+            "{MOTP_SCHEME}:/{label}?secret={}",
+            hex::encode(&params.secret)
+        )),
     }
 }
 
@@ -291,7 +285,10 @@ mod tests {
 
     #[test]
     fn parse_totp_basic() {
-        let p = parse("otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example").unwrap();
+        let p = parse(
+            "otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example",
+        )
+        .unwrap();
         assert_eq!(p.kind, OtpKind::Totp);
         assert_eq!(p.issuer, "Example");
         assert_eq!(p.account, "alice@example.com");
@@ -332,10 +329,7 @@ mod tests {
         // pin is base32-encoded UTF-8; Yandex secret must be 16 bytes.
         let pin = base32::encode(b"1234");
         let secret = base32::encode(&hex::decode("00112233445566778899aabbccddeeff").unwrap());
-        let p = parse(&format!(
-            "otpauth://yaotp/user?secret={secret}&pin={pin}"
-        ))
-        .unwrap();
+        let p = parse(&format!("otpauth://yaotp/user?secret={secret}&pin={pin}")).unwrap();
         assert_eq!(p.kind, OtpKind::Yandex);
         assert_eq!(p.pin.as_deref(), Some("1234"));
         assert_eq!(p.digits, 8);
@@ -346,7 +340,10 @@ mod tests {
     fn parse_motp() {
         let p = parse("motp:/user?secret=00112233445566778899aabbccddeeff").unwrap();
         assert_eq!(p.kind, OtpKind::Motp);
-        assert_eq!(p.secret, hex::decode("00112233445566778899aabbccddeeff").unwrap());
+        assert_eq!(
+            p.secret,
+            hex::decode("00112233445566778899aabbccddeeff").unwrap()
+        );
         assert_eq!(p.digits, 6);
         assert_eq!(p.period, 10);
         assert_eq!(p.algorithm, HashAlgorithm::Md5);
@@ -354,7 +351,10 @@ mod tests {
 
     #[test]
     fn build_roundtrip_totp() {
-        let p = parse("otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example").unwrap();
+        let p = parse(
+            "otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example",
+        )
+        .unwrap();
         let uri = build(&p).unwrap();
         let p2 = parse(&uri).unwrap();
         assert_eq!(p, p2);

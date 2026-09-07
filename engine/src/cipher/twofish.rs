@@ -23,9 +23,9 @@ pub fn encrypt(key: &[u8], iv: &[u8], plaintext: &[u8]) -> Result<Vec<u8>> {
 pub fn decrypt(key: &[u8], iv: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>> {
     let cipher = TwofishCbcDec::new_from_slices(key, iv).map_err(|_| Error::InvalidSecret)?;
     let mut buf = ciphertext.to_vec();
-    let pt = cipher
-        .decrypt_padded_mut::<Pkcs7>(&mut buf)
-        .map_err(|_| Error::Encoding("twofish-cbc decrypt failed (bad key or padding)".to_string()))?;
+    let pt = cipher.decrypt_padded_mut::<Pkcs7>(&mut buf).map_err(|_| {
+        Error::Encoding("twofish-cbc decrypt failed (bad key or padding)".to_string())
+    })?;
     Ok(pt.to_vec())
 }
 
@@ -49,6 +49,9 @@ mod tests {
         let key = [3u8; 32];
         let iv = [9u8; 16];
         let pt = b"twofish test data";
-        assert_eq!(encrypt(&key, &iv, pt).unwrap(), encrypt(&key, &iv, pt).unwrap());
+        assert_eq!(
+            encrypt(&key, &iv, pt).unwrap(),
+            encrypt(&key, &iv, pt).unwrap()
+        );
     }
 }

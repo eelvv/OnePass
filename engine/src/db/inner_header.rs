@@ -91,7 +91,11 @@ impl InnerHeader {
         );
         for b in &self.binaries {
             let mut value = Vec::with_capacity(b.data.len() + 1);
-            value.push(if b.protected { BINARY_FLAG_PROTECTED } else { 0 });
+            value.push(if b.protected {
+                BINARY_FLAG_PROTECTED
+            } else {
+                0
+            });
             value.extend_from_slice(&b.data);
             push_field(&mut out, FIELD_BINARY, &value);
         }

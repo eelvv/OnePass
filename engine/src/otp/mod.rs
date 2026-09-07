@@ -17,12 +17,19 @@ pub use types::{HashAlgorithm, OtpKind, OtpParams};
 pub fn generate(params: &OtpParams, time_secs: u64) -> crate::Result<String> {
     params.validate()?;
     match params.kind {
-        OtpKind::Hotp => {
-            hotp::hotp(&params.secret, params.counter, params.digits, params.algorithm)
-        }
-        OtpKind::Totp => {
-            totp::totp(&params.secret, params.period, time_secs, params.digits, params.algorithm)
-        }
+        OtpKind::Hotp => hotp::hotp(
+            &params.secret,
+            params.counter,
+            params.digits,
+            params.algorithm,
+        ),
+        OtpKind::Totp => totp::totp(
+            &params.secret,
+            params.period,
+            time_secs,
+            params.digits,
+            params.algorithm,
+        ),
         OtpKind::Steam => steam::steam(&params.secret, params.period, time_secs),
         OtpKind::Motp => {
             let pin = params

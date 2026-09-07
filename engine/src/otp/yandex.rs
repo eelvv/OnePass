@@ -43,7 +43,11 @@ pub fn yandex(
     }
 
     let counter = time_secs / period;
-    let hash = hotp::hmac(crate::otp::types::HashAlgorithm::Sha256, &key_hash, &counter.to_be_bytes())?;
+    let hash = hotp::hmac(
+        crate::otp::types::HashAlgorithm::Sha256,
+        &key_hash,
+        &counter.to_be_bytes(),
+    )?;
     let code = hotp::truncate8(&hash);
 
     let digits = if digits == 0 { 8 } else { digits };
@@ -82,8 +86,7 @@ pub fn checksum_valid(secret: &[u8]) -> bool {
     if len != SECRET_FULL_LENGTH {
         return false;
     }
-    let original =
-        (u16::from(secret[len - 2] & 0x0F) << 8) | u16::from(secret[len - 1]);
+    let original = (u16::from(secret[len - 2] & 0x0F) << 8) | u16::from(secret[len - 1]);
 
     let mut accum: u16 = 0;
     let mut accum_bits: u32 = 0;

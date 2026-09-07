@@ -33,8 +33,14 @@ fn detect_and_import(data: &[u8]) -> Vec<Entry> {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let input = args.get(1).map(|s| s.as_str()).unwrap_or("../examples/otpauth-uris.txt");
-    let output = args.get(2).map(|s| s.as_str()).unwrap_or("../examples/imported.kdbx");
+    let input = args
+        .get(1)
+        .map(|s| s.as_str())
+        .unwrap_or("../examples/otpauth-uris.txt");
+    let output = args
+        .get(2)
+        .map(|s| s.as_str())
+        .unwrap_or("../examples/imported.kdbx");
     let out_password = args.get(3).map(|s| s.as_str()).unwrap_or("example1");
 
     let data = std::fs::read(input).expect("read input");
@@ -64,5 +70,8 @@ fn main() {
 
     let saved = save(&vault, out_password.as_bytes()).expect("save");
     std::fs::write(output, &saved).expect("write output");
-    println!("Saved {} bytes to {output} (password: {out_password})", saved.len());
+    println!(
+        "Saved {} bytes to {output} (password: {out_password})",
+        saved.len()
+    );
 }

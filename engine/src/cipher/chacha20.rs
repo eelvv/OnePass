@@ -38,10 +38,8 @@ mod tests {
     // keystream forward by one 64-byte block to match the RFC's counter.
     #[test]
     fn rfc8439_242() {
-        let key = hex::decode(
-            "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
-        )
-        .unwrap();
+        let key = hex::decode("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
+            .unwrap();
         let nonce = hex::decode("000000000000004a00000000").unwrap();
         let plaintext = b"Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it.";
         let expected = hex::decode(

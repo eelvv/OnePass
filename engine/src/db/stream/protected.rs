@@ -50,13 +50,23 @@ impl ProtectedStream {
         match kind {
             ProtectedStreamKind::ChaCha20 => {
                 let (key, nonce) = chacha20_key_nonce(protected_key);
-                Self { kind, key, nonce, position: 0 }
+                Self {
+                    kind,
+                    key,
+                    nonce,
+                    position: 0,
+                }
             }
             ProtectedStreamKind::Salsa20 => {
                 let key = Sha256::digest(protected_key).into();
                 let mut nonce = [0u8; 12];
                 nonce[..8].copy_from_slice(&SALSA20_IV);
-                Self { kind, key, nonce, position: 0 }
+                Self {
+                    kind,
+                    key,
+                    nonce,
+                    position: 0,
+                }
             }
         }
     }

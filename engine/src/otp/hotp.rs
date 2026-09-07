@@ -50,7 +50,11 @@ pub fn format_code(code: u64, digits: u32) -> Result<String> {
     let modulus = 10u64
         .checked_pow(digits)
         .ok_or(Error::InvalidDigits(digits))?;
-    Ok(format!("{:0width$}", code % modulus, width = digits as usize))
+    Ok(format!(
+        "{:0width$}",
+        code % modulus,
+        width = digits as usize
+    ))
 }
 
 /// RFC 4226 HOTP.

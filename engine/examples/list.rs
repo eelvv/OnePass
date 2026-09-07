@@ -21,7 +21,10 @@ fn walk(g: &Group, depth: usize, out: &mut Vec<String>) {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let input = args.get(1).map(|s| s.as_str()).unwrap_or("../examples/output.kdbx");
+    let input = args
+        .get(1)
+        .map(|s| s.as_str())
+        .unwrap_or("../examples/output.kdbx");
     let password = args.get(2).map(|s| s.as_str()).unwrap_or("example1");
 
     let data = std::fs::read(input).expect("read");

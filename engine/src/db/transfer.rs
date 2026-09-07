@@ -10,9 +10,7 @@ use crate::db::otp::entry_otp;
 use crate::db::{random_bytes, Entry, Field, Group};
 use crate::encoding::base32;
 use crate::error::{Error, Result};
-use crate::otp::migration::{
-    build_migration_uri, parse_migration_uri, MigrationEntry,
-};
+use crate::otp::migration::{build_migration_uri, parse_migration_uri, MigrationEntry};
 use crate::otp::{HashAlgorithm, OtpKind, OtpParams};
 use crate::uri;
 
@@ -41,9 +39,11 @@ pub fn entry_from_otp_params(params: &OtpParams) -> Result<Entry> {
         uuid: random_bytes(16)?,
         ..Default::default()
     };
-    entry
-        .fields
-        .push(Field { key: "Title".to_string(), value: title, protected: false });
+    entry.fields.push(Field {
+        key: "Title".to_string(),
+        value: title,
+        protected: false,
+    });
     if !params.account.is_empty() {
         entry.fields.push(Field {
             key: "UserName".to_string(),
@@ -162,10 +162,7 @@ pub fn detect_and_import(data: &[u8]) -> Result<Vec<Entry>> {
 }
 
 fn aegis_entry_to_entry(value: &serde_json::Value) -> Result<Entry> {
-    let kind_str = value
-        .get("type")
-        .and_then(|v| v.as_str())
-        .unwrap_or("totp");
+    let kind_str = value.get("type").and_then(|v| v.as_str()).unwrap_or("totp");
     let info = value
         .get("info")
         .ok_or_else(|| Error::Encoding("aegis entry: missing info".to_string()))?;
@@ -201,10 +198,13 @@ fn aegis_entry_to_entry(value: &serde_json::Value) -> Result<Entry> {
         return Err(Error::InvalidSecret);
     }
 
-    let period = info.get("period").and_then(|v| v.as_u64()).unwrap_or(match kind {
-        OtpKind::Motp => 10,
-        _ => 30,
-    });
+    let period = info
+        .get("period")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(match kind {
+            OtpKind::Motp => 10,
+            _ => 30,
+        });
     let counter = info.get("counter").and_then(|v| v.as_u64()).unwrap_or(0);
     let pin = info
         .get("pin")
@@ -246,7 +246,11 @@ fn aegis_entry_to_entry(value: &serde_json::Value) -> Result<Entry> {
     };
     entry.fields.push(Field {
         key: "Title".to_string(),
-        value: if issuer.is_empty() { name.clone() } else { issuer },
+        value: if issuer.is_empty() {
+            name.clone()
+        } else {
+            issuer
+        },
         protected: false,
     });
     entry.fields.push(Field {
@@ -276,9 +280,8 @@ fn aegis_entry_to_entry(value: &serde_json::Value) -> Result<Entry> {
 pub fn export_otpauth_uris(entries: &[&Entry]) -> Result<String> {
     let mut out = String::new();
     for e in entries {
-        let params = entry_otp(e).ok_or_else(|| {
-            Error::Encoding("entry has no readable otp field".to_string())
-        })?;
+        let params = entry_otp(e)
+            .ok_or_else(|| Error::Encoding("entry has no readable otp field".to_string()))?;
         out.push_str(&uri::build(&params)?);
         out.push('\n');
     }
@@ -291,19 +294,12 @@ pub fn export_aegis_json(entries: &[&Entry]) -> Result<Vec<u8>> {
 
     let mut arr = Vec::new();
     for e in entries {
-        let params = entry_otp(e).ok_or_else(|| {
-            Error::Encoding("entry has no readable otp field".to_string())
-        })?;
+        let params = entry_otp(e)
+            .ok_or_else(|| Error::Encoding("entry has no readable otp field".to_string()))?;
 
         let mut info = serde_json::Map::new();
-        info.insert(
-            "secret".to_string(),
-            json!(base32::encode(&params.secret)),
-        );
-        info.insert(
-            "algo".to_string(),
-            json!(params.algorithm.as_str()),
-        );
+        info.insert("secret".to_string(), json!(base32::encode(&params.secret)));
+        info.insert("algo".to_string(), json!(params.algorithm.as_str()));
         info.insert("digits".to_string(), json!(params.digits));
         match params.kind {
             OtpKind::Hotp => {
@@ -348,9 +344,8 @@ pub fn export_aegis_json(entries: &[&Entry]) -> Result<Vec<u8>> {
 pub fn export_google_migration(entries: &[&Entry]) -> Result<String> {
     let mut migrated = Vec::new();
     for e in entries {
-        let params = entry_otp(e).ok_or_else(|| {
-            Error::Encoding("entry has no readable otp field".to_string())
-        })?;
+        let params = entry_otp(e)
+            .ok_or_else(|| Error::Encoding("entry has no readable otp field".to_string()))?;
         if !matches!(params.kind, OtpKind::Hotp | OtpKind::Totp) {
             continue; // the migration format only knows HOTP/TOTP
         }

@@ -159,10 +159,9 @@ impl VariantDictionary {
                 0x0D if value.len() == 8 => {
                     VdValue::Int64(i64::from_le_bytes(value.try_into().unwrap()))
                 }
-                0x18 => VdValue::String(
-                    String::from_utf8(value.to_vec())
-                        .map_err(|_| Error::Encoding("invalid variant dict value utf-8".to_string()))?,
-                ),
+                0x18 => VdValue::String(String::from_utf8(value.to_vec()).map_err(|_| {
+                    Error::Encoding("invalid variant dict value utf-8".to_string())
+                })?),
                 0x42 => VdValue::ByteArray(value.to_vec()),
                 _ => continue, // unknown type: skip
             };
@@ -173,7 +172,9 @@ impl VariantDictionary {
 }
 
 fn read_u8(data: &[u8], pos: &mut usize) -> Result<u8> {
-    let b = *data.get(*pos).ok_or_else(|| Error::Encoding("truncated".to_string()))?;
+    let b = *data
+        .get(*pos)
+        .ok_or_else(|| Error::Encoding("truncated".to_string()))?;
     *pos += 1;
     Ok(b)
 }
@@ -224,8 +225,8 @@ mod tests {
         d.set(
             "$UUID",
             VdValue::ByteArray(vec![
-                0xEF, 0x63, 0x6D, 0xDF, 0x8C, 0x29, 0x44, 0x4B, 0x91, 0xF7, 0xA9, 0xA4, 0x03,
-                0xE3, 0x0A, 0x0C,
+                0xEF, 0x63, 0x6D, 0xDF, 0x8C, 0x29, 0x44, 0x4B, 0x91, 0xF7, 0xA9, 0xA4, 0x03, 0xE3,
+                0x0A, 0x0C,
             ]),
         );
 

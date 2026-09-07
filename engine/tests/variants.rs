@@ -36,7 +36,12 @@ fn motp_vectors() {
 #[test]
 fn yandex_vectors() {
     let cases = [
-        ("00112233445566778899aabbccddeeff", "1234", 1_700_000_000u64, "jjeghxtd"),
+        (
+            "00112233445566778899aabbccddeeff",
+            "1234",
+            1_700_000_000u64,
+            "jjeghxtd",
+        ),
         ("00112233445566778899aabbccddeeff", "0000", 0, "unnyoebf"),
     ];
     for (secret_hex, pin, t, expected) in cases {
@@ -80,8 +85,8 @@ fn generated_password_shape() {
         let p = onepass_engine::db::generate_password(len).unwrap();
         assert_eq!(p.chars().count(), len, "len={len}");
         assert!(
-            p.chars().all(|c| c.is_ascii_alphanumeric()
-                || "!@#$%^&*()-_=+[]{};:,.<>?".contains(c)),
+            p.chars()
+                .all(|c| c.is_ascii_alphanumeric() || "!@#$%^&*()-_=+[]{};:,.<>?".contains(c)),
             "unexpected char in {p}"
         );
     }

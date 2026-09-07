@@ -84,7 +84,9 @@ impl KdbxHeader {
         let sig1 = read_u32(data, &mut pos)?;
         let sig2 = read_u32(data, &mut pos)?;
         if sig1 != SIG1 || (sig2 != SIG2 && sig2 != SIG2_PRE) {
-            return Err(Error::Encoding("not a KDBX file (bad signature)".to_string()));
+            return Err(Error::Encoding(
+                "not a KDBX file (bad signature)".to_string(),
+            ));
         }
 
         let version = read_u32(data, &mut pos)?;
@@ -154,7 +156,8 @@ impl KdbxHeader {
                     header.inner_random_stream_id = Some(read_u32_slice(&field_data)?);
                 }
                 FIELD_KDF_PARAMS => {
-                    header.kdf = KdfParams::from_dict(&VariantDictionary::deserialize(&field_data)?)?;
+                    header.kdf =
+                        KdfParams::from_dict(&VariantDictionary::deserialize(&field_data)?)?;
                 }
                 FIELD_PUBLIC_CUSTOM_DATA => {
                     header.public_custom_data = VariantDictionary::deserialize(&field_data)?;
@@ -195,7 +198,12 @@ impl KdbxHeader {
         // MasterSeed (4)
         push_field(&mut out, FIELD_MASTER_SEED, &self.master_seed, self.version);
         // EncryptionIV (7)
-        push_field(&mut out, FIELD_ENCRYPTION_IV, &self.encryption_iv, self.version);
+        push_field(
+            &mut out,
+            FIELD_ENCRYPTION_IV,
+            &self.encryption_iv,
+            self.version,
+        );
         // KdfParameters (11)
         push_field(
             &mut out,

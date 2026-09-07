@@ -107,9 +107,7 @@ impl App {
     }
 
     pub fn selected_entry(&self) -> Option<&Entry> {
-        self.filtered_entries()
-            .get(self.selected)
-            .map(|(_, e)| *e)
+        self.filtered_entries().get(self.selected).map(|(_, e)| *e)
     }
 
     fn clamp_selection(&mut self) {
@@ -383,7 +381,13 @@ impl App {
         let n = entries.len();
 
         // Find or create an "Imported" group.
-        if let Some(g) = self.vault.root.groups.iter_mut().find(|g| g.name == "Imported") {
+        if let Some(g) = self
+            .vault
+            .root
+            .groups
+            .iter_mut()
+            .find(|g| g.name == "Imported")
+        {
             g.entries.extend(entries);
         } else {
             let mut g = Group {
@@ -395,7 +399,9 @@ impl App {
             self.vault.root.groups.push(g);
         }
         self.clamp_selection();
-        Ok(format!("Imported {n} entries into 'Imported' (remember to save)"))
+        Ok(format!(
+            "Imported {n} entries into 'Imported' (remember to save)"
+        ))
     }
 
     fn do_export(&mut self, path: &str) -> Result<String, onepass_engine::Error> {

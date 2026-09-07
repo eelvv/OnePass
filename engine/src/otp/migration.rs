@@ -49,9 +49,7 @@ pub fn parse_migration_uri(uri: &str) -> Result<Vec<MigrationEntry>> {
         .split_once(':')
         .ok_or_else(|| Error::InvalidUri("missing scheme".to_string()))?;
     if !scheme.eq_ignore_ascii_case("otpauth-migration") {
-        return Err(Error::InvalidUri(format!(
-            "unsupported scheme: {scheme}"
-        )));
+        return Err(Error::InvalidUri(format!("unsupported scheme: {scheme}")));
     }
     let query = rest.split_once('?').map(|(_, q)| q).unwrap_or("");
     let data = query_param(query, "data")
@@ -72,10 +70,7 @@ pub fn build_migration_uri(entries: &[MigrationEntry]) -> Result<String> {
     let payload = encode_payload(entries)?;
     let data = base64::engine::general_purpose::STANDARD.encode(&payload);
     // Percent-encode the Base64 so the URI stays well-formed.
-    let encoded = percent_encoding::utf8_percent_encode(
-        &data,
-        percent_encoding::NON_ALPHANUMERIC,
-    );
+    let encoded = percent_encoding::utf8_percent_encode(&data, percent_encoding::NON_ALPHANUMERIC);
     Ok(format!("otpauth-migration://offline?data={encoded}"))
 }
 
@@ -131,7 +126,9 @@ fn parse_otp_parameters(data: &[u8]) -> Result<MigrationEntry> {
     }
 
     if secret.is_empty() {
-        return Err(Error::InvalidUri("migration entry has empty secret".to_string()));
+        return Err(Error::InvalidUri(
+            "migration entry has empty secret".to_string(),
+        ));
     }
 
     let algorithm = match algorithm {
@@ -148,18 +145,12 @@ fn parse_otp_parameters(data: &[u8]) -> Result<MigrationEntry> {
     let digits = match digits {
         0 | 1 => 6,
         2 => 8,
-        other => {
-            return Err(Error::InvalidUri(format!(
-                "migration digit count {other}"
-            )))
-        }
+        other => return Err(Error::InvalidUri(format!("migration digit count {other}"))),
     };
     let otp_kind = match kind {
         0 | 2 => OtpKind::Totp,
         1 => OtpKind::Hotp,
-        other => {
-            return Err(Error::UnsupportedType(format!("migration type {other}")))
-        }
+        other => return Err(Error::UnsupportedType(format!("migration type {other}"))),
     };
 
     Ok(MigrationEntry {

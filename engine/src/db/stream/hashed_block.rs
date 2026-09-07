@@ -12,7 +12,11 @@ const DEFAULT_BLOCK_SIZE: usize = 1024 * 1024;
 
 /// Encodes data into a hashed-block stream (including the terminating block).
 pub fn encode(data: &[u8], block_size: usize) -> Vec<u8> {
-    let bs = if block_size == 0 { DEFAULT_BLOCK_SIZE } else { block_size };
+    let bs = if block_size == 0 {
+        DEFAULT_BLOCK_SIZE
+    } else {
+        block_size
+    };
     let mut out = Vec::new();
     let mut index = 0u32;
     if data.is_empty() {
@@ -44,7 +48,9 @@ pub fn decode(data: &[u8]) -> Result<Vec<u8>> {
 
         if size == 0 {
             if stored_hash.iter().any(|&b| b != 0) {
-                return Err(Error::Encoding("hashed block terminator hash not zero".to_string()));
+                return Err(Error::Encoding(
+                    "hashed block terminator hash not zero".to_string(),
+                ));
             }
             break;
         }

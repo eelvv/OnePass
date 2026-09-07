@@ -21,7 +21,10 @@ fn rfc4226() {
         (9, "520489"),
     ];
     for (counter, code) in expected {
-        assert_eq!(hotp::hotp(SECRET, counter, 6, HashAlgorithm::Sha1).unwrap(), code);
+        assert_eq!(
+            hotp::hotp(SECRET, counter, 6, HashAlgorithm::Sha1).unwrap(),
+            code
+        );
     }
 }
 
@@ -36,7 +39,10 @@ fn rfc6238() {
         (20_000_000_000, "65353130"),
     ];
     for (t, code) in sha1 {
-        assert_eq!(totp::totp(SECRET, 30, t, 8, HashAlgorithm::Sha1).unwrap(), code);
+        assert_eq!(
+            totp::totp(SECRET, 30, t, 8, HashAlgorithm::Sha1).unwrap(),
+            code
+        );
     }
 }
 
@@ -88,9 +94,7 @@ fn generate_via_params() {
 fn base32_secret_through_uri() {
     // otpauth with the RFC 6238 secret base32-encoded
     let b32 = base32::encode(SECRET);
-    let uri = format!(
-        "otpauth://totp/Test:user?secret={b32}&digits=8&period=30&algorithm=SHA1"
-    );
+    let uri = format!("otpauth://totp/Test:user?secret={b32}&digits=8&period=30&algorithm=SHA1");
     let p = onepass_engine::uri::parse(&uri).unwrap();
     assert_eq!(generate(&p, 59).unwrap(), "94287082");
 }
