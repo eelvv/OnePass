@@ -89,15 +89,11 @@ fn draw_list(f: &mut Frame, app: &mut App, area: Rect) {
         .enumerate()
         .map(|(i, (path, e))| {
             let mark = if app.marked.contains(&e.uuid) {
-                "☑"
+                "x"
             } else {
                 " "
             };
-            let kind = if entry_otp(e).is_some() {
-                "🔑"
-            } else {
-                "🔒"
-            };
+            let kind = if entry_otp(e).is_some() { "O" } else { "P" };
             Row::new(vec![
                 Cell::from(format!("{}{}", mark, i + 1)),
                 Cell::from(kind),
@@ -243,10 +239,10 @@ fn draw_details(f: &mut Frame, app: &mut App, area: Rect) {
 fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
     let msg = app.message.clone().unwrap_or_default();
     let panel_hint = match app.panel {
-        Panel::List => " List: Space多选 / a添 / t添2FA / d删 / Tab切Details ",
-        Panel::Details => " Details: j/k导航 / c复制 / v粘贴 / Enter编辑 / Tab切List ",
+        Panel::List => " List: Spacemulti-select / aadd / tadd2FA / ddelete / Tabswitch Details ",
+        Panel::Details => " Details: j/knavigate / ccopy / vpaste / Enteredit / Tabswitch List ",
     };
-    let common = " s 保存 │ / 搜索 │ i 导入 │ e 导出 │ r 显示/隐藏 │ ? 帮助 │ q 退出 ";
+    let common = " s save │ / search │ i import │ e export │ r reveal/hide │ ? help │ q quit ";
     let text = format!("{panel_hint}{common}");
     let line = if msg.is_empty() {
         Line::from(Span::styled(text, Style::new().dim()))
@@ -338,11 +334,11 @@ fn help_popup(f: &mut Frame, app: &App) {
             "Global",
             vec![
                 ("Tab", "切换 List / Details 面板"),
-                ("?", "打开 / 关闭本帮助"),
-                ("s", "保存当前库到磁盘"),
-                ("P", "修改 master password（仅内存生效，需 s 写入）"),
-                ("q", "退出（未保存会确认）"),
-                ("Esc", "清除筛选 / 返回 Normal"),
+                ("?", "打开 / 关闭本help"),
+                ("s", "save当前库到磁盘"),
+                ("P", "change master password (in memory; press s to write)"),
+                ("q", "quit（未save会确认）"),
+                ("Esc", "clear filter / return to Normal"),
             ],
         ),
         (
@@ -350,31 +346,31 @@ fn help_popup(f: &mut Frame, app: &App) {
             vec![
                 ("j/k", "上下移动"),
                 ("g/G", "跳到首 / 末"),
-                ("Space", "切换当前条目多选"),
-                ("a", "添加 密码条目"),
-                ("t", "添加 2FA 条目"),
-                ("d", "删除当前 / 所有标记条目"),
-                ("Enter", "编辑当前条目"),
-                ("u / p / U / o", "复制 username / password / URL / OTP code"),
-                ("r", "显示/隐藏密码（15s 自动隐藏）"),
+                ("Space", "切换当前条目multi-select"),
+                ("a", "add加 密码条目"),
+                ("t", "add加 2FA 条目"),
+                ("d", "delete除当前 / 所有标记条目"),
+                ("Enter", "edit当前条目"),
+                ("u / p / U / o", "copy username / password / URL / OTP code"),
+                ("r", "reveal/hide密码（15s 自动隐藏）"),
             ],
         ),
         (
             "Details 面板",
             vec![
-                ("j/k", "在字段之间移动"),
-                ("c", "复制当前字段到剪贴板"),
-                ("v", "把剪贴板内容写入当前字段"),
-                ("Enter", "切换到 List 面板并编辑当前条目"),
-                ("r", "显示/隐藏密码"),
+                ("j/k", "navigate fields"),
+                ("c", "copy当前字段到剪贴板"),
+                ("v", "paste clipboard content"),
+                ("Enter", "切换到 List 面板并edit当前条目"),
+                ("r", "reveal/hide密码"),
             ],
         ),
         (
-            "筛选 / 导入 / 导出",
+            "筛选 / import / export",
             vec![
-                ("/", "进入搜索（实时过滤）"),
-                ("i", "导入 2FA（Aegis JSON / URI list / Google 迁移）"),
-                ("e", "导出 2FA（无标记→全部；有标记→仅标记）"),
+                ("/", "进入search（实时过滤）"),
+                ("i", "import 2FA（Aegis JSON / URI list / Google 迁移）"),
+                ("e", "export 2FA（无标记→全部；有标记→仅标记）"),
                 ("F5", "刷新 OTP 显示"),
             ],
         ),

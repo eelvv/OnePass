@@ -324,11 +324,6 @@ impl App {
                 self.form = AddForm::default();
                 self.mode = Mode::AddEntry;
             }
-            KeyCode::Char('t') => {
-                self.form = AddForm::default();
-                self.form.kind = AddFormKind::TwoFa;
-                self.mode = Mode::AddEntry;
-            }
             KeyCode::Char('d') => self.request_delete(),
             KeyCode::Enter => self.begin_edit(),
             KeyCode::Esc => {
