@@ -22,8 +22,8 @@ pub fn steam(secret: &[u8], period: u64, time_secs: u64) -> Result<String> {
     let mut out = [0u8; STEAM_DIGITS];
     // Steam appends the least-significant alphabet index first (unlike the
     // base-26 Yandex encoding, which is big-endian).
-    for i in 0..STEAM_DIGITS {
-        out[i] = STEAM_ALPHABET[(code % 26) as usize];
+    for slot in &mut out {
+        *slot = STEAM_ALPHABET[(code % 26) as usize];
         code /= 26;
     }
     Ok(String::from_utf8(out.to_vec()).expect("steam alphabet is ASCII"))

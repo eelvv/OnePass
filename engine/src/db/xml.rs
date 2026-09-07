@@ -385,7 +385,7 @@ fn write_entry(s: &mut String, e: &Entry, stream: &mut ProtectedStream) -> Resul
         if f.protected {
             s.push_str(" Protected=\"True\"");
         }
-        s.push_str(">");
+        s.push('>');
         if f.protected {
             let mut data = f.value.as_bytes().to_vec();
             stream.xor_in_place(&mut data)?;
