@@ -25,8 +25,10 @@ pub enum Panel {
 pub enum Mode {
     Normal,
     Search,
-    /// Unified add/edit panel. Reused for editing when `form.editing_uuid` is set.
+    /// Unified add/edit panel (reused for editing existing entries).
     AddEntry,
+    /// Inline single-field edit triggered from Details focus (Enter).
+    DetailsEdit,
     Confirm,
     InputPath,
     ChangePassword,
@@ -240,6 +242,7 @@ impl App {
             Mode::Search | Mode::InputPath => self.key_text(key),
             Mode::AddEntry => self.key_form(key),
             Mode::Confirm => self.key_confirm(key),
+            Mode::DetailsEdit => self.key_details_edit(key),
             Mode::ChangePassword => self.key_change_password(key),
             Mode::Help => self.key_help(key),
         }
@@ -326,7 +329,25 @@ impl App {
                 self.mode = Mode::AddEntry;
             }
             KeyCode::Char('d') => self.request_delete(),
-            KeyCode::Enter => self.begin_edit(),
+            KeyCode::Enter => {
+                // Details focus: open inline single-field edit mode.
+                if self.panel == Panel::Details {
+                    let Some(entry) = self.selected_entry() else {
+                        return;
+                    };
+                    if self.detail_field < entry.fields.len() {
+                        let value = entry.fields[self.detail_field].value.clone();
+                        self.input = value;
+                        self.mode = Mode::DetailsEdit;
+                    } else {
+                        // OTP row (not editable inline); just show message.
+                        self.message = Some("OTP row: press F5 to refresh".to_string());
+                    }
+                } else {
+                    // List focus: edit the selected entry using the full form.
+                    self.begin_edit();
+                }
+            }
             KeyCode::Esc => {
                 self.filter.clear();
             }
@@ -349,7 +370,7 @@ impl App {
             }
             KeyCode::Char('c') => self.copy_details_row(),
             KeyCode::Char('v') => self.paste_details_row(),
-            KeyCode::Enter => self.begin_edit(),
+            KeyCode::Enter => self.start_details_edit(),
             KeyCode::Esc => self.panel = Panel::List,
             _ => {}
         }
@@ -415,7 +436,7 @@ impl App {
                     AddFormKind::TwoFa => AddFormKind::Password,
                 }
             }
-            KeyCode::Right if self.form.field == 0 => {
+            KeyCode::Right if self.form.field == 0 && self.form.editing_uuid.is_none() => {
                 self.form.kind = match self.form.kind {
                     AddFormKind::Password => AddFormKind::TwoFa,
                     AddFormKind::TwoFa => AddFormKind::Password,
@@ -658,6 +679,68 @@ impl App {
         }
         self.form = form;
         self.mode = Mode::AddEntry;
+    }
+
+    /// Details focus: Enter opens inline single-field edit mode.
+    fn start_details_edit(&mut self) {
+        let Some(entry) = self.selected_entry() else {
+            return;
+        };
+        let rows = self.details_row_count();
+        let value = if self.detail_field < entry.fields.len() {
+            entry.fields[self.detail_field].value.clone()
+        } else {
+            // OTP row (last row) — not editable inline.
+            "".to_string()
+        };
+        self.input = value;
+        self.mode = Mode::DetailsEdit;
+    }
+
+    fn key_details_edit(&mut self, key: KeyEvent) {
+        let Some(entry) = self.selected_entry() else {
+            self.mode = Mode::Normal;
+            return;
+        };
+        let field_count = entry.fields.len();
+        let field_key = if self.detail_field < field_count {
+            entry.fields[self.detail_field].key.clone()
+        } else {
+            String::new()
+        };
+        let entry_uuid = entry.uuid.clone();
+        match key.code {
+            KeyCode::Char(c) => self.input.push(c),
+            KeyCode::Backspace => {
+                self.input.pop();
+            }
+            KeyCode::Enter => {
+                let edited_value = std::mem::take(&mut self.input);
+                self.mode = Mode::Normal;
+                if self.detail_field >= field_count {
+                    self.message = Some("OTP row cannot be edited inline".to_string());
+                } else if edited_value.is_empty() {
+                    if let Some(e) = find_by_uuid_mut(&mut self.vault.root, &entry_uuid) {
+                        if let Some(pos) = e.fields.iter().position(|f| f.key == field_key) {
+                            e.fields.remove(pos);
+                        }
+                    }
+                    self.dirty = true;
+                    self.message = Some("Field cleared".to_string());
+                } else if let Some(e) = find_by_uuid_mut(&mut self.vault.root, &entry_uuid) {
+                    if let Some(f) = e.fields.iter_mut().find(|f| f.key == field_key) {
+                        f.value = edited_value;
+                    }
+                    self.dirty = true;
+                    self.message = Some("Field updated (remember to save)".to_string());
+                }
+            }
+            KeyCode::Esc => {
+                self.input.clear();
+                self.mode = Mode::Normal;
+            }
+            _ => {}
+        }
     }
 
     fn toggle_reveal(&mut self) {
