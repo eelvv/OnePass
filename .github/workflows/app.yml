@@ -10,6 +10,11 @@ on:
     tags: ["app-v*"]
   workflow_dispatch:
 
+# Required for softprops/action-gh-release to attach APKs on app-v* tags
+# (same grant cli.yml declares for its release uploads).
+permissions:
+  contents: write
+
 jobs:
   apk:
     runs-on: ubuntu-latest
