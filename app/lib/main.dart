@@ -1,89 +1,100 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import 'src/rust/api/engine.dart';
-import 'src/rust/api/simple.dart';
+import 'l10n/app_localizations.dart';
+import 'src/rust/api/vault.dart' as bridge;
 import 'src/rust/frb_generated.dart';
+import 'features/lock/lock_screen.dart';
+import 'features/vault/vault_screen.dart';
+import 'state/providers.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Bootstrap the Rust core: loads librust_lib_onepass.so into the process.
-  // All engine logic lives in Rust; Dart only calls across the FFI boundary
-  // (lib/src/rust is generated marshalling glue, not engine code).
+  // All engine logic lives in Rust; Dart only calls across the FFI boundary.
   await RustLib.init();
-  runApp(const OnePassApp());
+  final prefs = await SharedPreferences.getInstance();
+  runApp(ProviderScope(
+    overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+    child: const OnePassApp(),
+  ));
 }
 
-/// Phase 0 scaffolding: proves the Rust bridge end-to-end on device.
-/// Replaced by the real app shell in later phases.
-class OnePassApp extends StatelessWidget {
+class OnePassApp extends ConsumerStatefulWidget {
   const OnePassApp({super.key});
 
   @override
+  ConsumerState<OnePassApp> createState() => _OnePassAppState();
+}
+
+class _OnePassAppState extends ConsumerState<OnePassApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Auto-lock: drop the Rust session (password zeroized) when the app is
+    // backgrounded, if the user has not disabled it.
+    if (state == AppLifecycleState.paused &&
+        ref.read(settingsProvider).lockOnBackground &&
+        !ref.read(lockedProvider)) {
+      bridge.lockVault();
+      ref.read(lockedProvider.notifier).setLocked(true);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(settingsProvider);
+    final locked = ref.watch(lockedProvider);
+
+    final seed = accentPresets[settings.seedIndex % accentPresets.length].seed;
+    final themeMode = switch (settings.themeMode) {
+      ThemeModeSetting.system => ThemeMode.system,
+      ThemeModeSetting.light => ThemeMode.light,
+      ThemeModeSetting.dark => ThemeMode.dark,
+    };
+    final locale = switch (settings.locale) {
+      LocaleSetting.system => null,
+      LocaleSetting.zh => const Locale('zh'),
+      LocaleSetting.en => const Locale('en'),
+    };
+
     return MaterialApp(
       title: 'OnePass',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF3D5AFE)),
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF3D5AFE),
-          brightness: Brightness.dark,
-        ),
-      ),
-      home: const BridgeSmokeScreen(),
-    );
-  }
-}
-
-/// Fetches data across the FFI boundary and hands plain values to the view.
-class BridgeSmokeScreen extends StatelessWidget {
-  const BridgeSmokeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // Both are synchronous FFI calls executed by the Rust engine.
-    return BridgeSmokeView(
-      engineVersion: engineVersion(),
-      greeting: greet(name: 'OnePass'),
-    );
-  }
-}
-
-/// Pure Flutter view (no bridge dependency) — host-testable.
-class BridgeSmokeView extends StatelessWidget {
-  const BridgeSmokeView({
-    super.key,
-    required this.engineVersion,
-    required this.greeting,
-  });
-
-  final String engineVersion;
-  final String greeting;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('OnePass')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.shield_outlined, size: 64),
-            const SizedBox(height: 16),
-            Text('Engine v$engineVersion',
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(greeting, style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 24),
-            Text(
-              'Phase 0 build: Flutter → FFI → Rust engine',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-        ),
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      theme: buildOnePassTheme(seed, Brightness.light),
+      darkTheme: buildOnePassTheme(seed, Brightness.dark),
+      themeMode: themeMode,
+      home: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: locked
+            ? LockScreen(
+                key: const ValueKey('lock'),
+                onUnlocked: () {},
+              )
+            : const VaultScreen(key: ValueKey('vault')),
       ),
     );
   }
