@@ -6,7 +6,9 @@ plugins {
 
 android {
     namespace = "com.eelvv.onepass"
-    compileSdk = flutter.compileSdkVersion
+    // Pinned explicitly (not flutter.compileSdkVersion): plugin AAR metadata
+    // (flutter_plugin_android_lifecycle via file_picker) requires 36+.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
