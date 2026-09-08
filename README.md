@@ -68,8 +68,8 @@ tags:
 
 | Component | Latest release | Downloads |
 |---|---|---|
-| CLI | [![CLI](https://img.shields.io/github/v/release/eelvv/OnePass?filter=cli-v*&label=%20)](https://github.com/eelvv/OnePass/releases?q=cli-v) | [Linux / macOS / Windows](https://github.com/eelvv/OnePass/releases?q=cli-v) |
-| Android app | [![App](https://img.shields.io/github/v/release/eelvv/OnePass?filter=app-v*&label=%20)](https://github.com/eelvv/OnePass/releases?q=app-v) | [APK (arm64)](https://github.com/eelvv/OnePass/releases?q=app-v) |
+| CLI | [![CLI](https://img.shields.io/github/v/release/eelvv/OnePass?filter=cli-v*&label=%20)](https://github.com/eelvv/OnePass/releases?q=cli) | [Linux / macOS / Windows](https://github.com/eelvv/OnePass/releases?q=cli) |
+| Android app | [![App](https://img.shields.io/github/v/release/eelvv/OnePass?filter=app-v*&label=%20)](https://github.com/eelvv/OnePass/releases?q=app) | [APK (arm64)](https://github.com/eelvv/OnePass/releases?q=app) |
 
 `onepass-engine` is a library and is never tagged on its own; the engine
 version bundled in a binary is noted in that release's notes.
