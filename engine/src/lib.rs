@@ -16,3 +16,6 @@ pub mod otp;
 pub mod uri;
 
 pub use error::{Error, Result};
+
+/// Crate version, exposed at runtime (CLI `--version`, app "about", bridge).
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
