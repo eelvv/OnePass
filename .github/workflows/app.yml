@@ -2,21 +2,45 @@
 #
 # Build machine requirements (GitHub ubuntu-latest runners have all of this):
 #   JDK 17, Flutter stable, Rust with aarch64-linux-android target, Android SDK/NDK.
-name: app
+#
+# Runs on branch pushes (APK artifact for manual device testing), as a
+# reusable workflow called by release.yml (app-v* / v* tags), and manually.
+# Tag releases go through release.yml only — the same shape as cli.yml —
+# so a tag never triggers two racing builds.
+
+name: App build
 
 on:
   push:
     branches: [main, flutter-app]
-    tags: ["app-v*"]
+  workflow_call:
+    inputs:
+      upload:
+        description: "Attach APK to the Release of `tag`"
+        type: boolean
+        default: true
+      tag:
+        description: "Tag whose Release receives the APK (required when upload = true)"
+        type: string
+        default: ""
   workflow_dispatch:
+    inputs:
+      upload:
+        description: "Attach APK to the Release of `tag`"
+        type: boolean
+        default: false
+      tag:
+        description: "Tag whose Release receives the APK (required when upload = true)"
+        type: string
+        default: ""
 
-# Required for softprops/action-gh-release to attach APKs on app-v* tags
+# Required for softprops/action-gh-release to attach APKs to releases
 # (same grant cli.yml declares for its release uploads).
 permissions:
   contents: write
 
 jobs:
-  apk:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -34,6 +58,20 @@ jobs:
         with:
           channel: stable
           cache: true
+
+      # cargokit compiles app/rust inside Gradle; without this cache the
+      # engine + bridge rebuild from scratch on every run. The shared-key is
+      # separate from the root workspace (ci.yml / cli.yml): the Cargo.lock is
+      # identical, so the same key would collide across different target
+      # layouts.
+      - name: Cache build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: onepass
+          shared-key: rust-app
+          add-job-id-key: false
+          cache-on-failure: true
+          workspaces: app/rust
 
       # Bridge bindings (rust/src/frb_generated.rs, lib/src/rust/*) are COMMITTED
       # so the build never needs the codegen tool. This step only guards against
@@ -60,8 +98,9 @@ jobs:
           path: app/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 
-      - name: Attach APK to GitHub release (app-v* tags only)
-        if: startsWith(github.ref, 'refs/tags/app-v')
+      - name: Attach APK to GitHub release
+        if: inputs.upload == true && inputs.tag != ''
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ inputs.tag }}
           files: app/build/app/outputs/flutter-apk/app-release.apk
