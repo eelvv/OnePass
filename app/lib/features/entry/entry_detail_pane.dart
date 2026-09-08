@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../shared/errors.dart';
+import '../../shared/logger.dart';
 import '../../src/rust/api/dto.dart';
 import '../../src/rust/api/vault.dart' as bridge;
 import '../../state/providers.dart';
@@ -63,7 +65,8 @@ class _DetailPaneState extends ConsumerState<DetailPane> {
         _loading = false;
       });
       if (info != null) _startTicker(info);
-    } catch (e) {
+    } catch (e, st) {
+      Logger.e('entry detail load failed', e, st);
       if (mounted) {
         setState(() {
           _error = e;
@@ -97,16 +100,16 @@ class _DetailPaneState extends ConsumerState<DetailPane> {
   Future<void> _reveal(String key) async {
     final uuid = ref.read(selectedEntryProvider);
     if (uuid == null) return;
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final value = await bridge.revealField(uuidHex: uuid, key: key);
       if (!mounted) return;
       setState(() => _revealed[key] = value);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
-      }
+    } catch (e, st) {
+      Logger.e('reveal failed', e, st);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Failed to reveal')),
+      );
     }
     _revealTimer?.cancel();
     _revealTimer = Timer(revealAutoHide, () {
@@ -138,6 +141,7 @@ class _DetailPaneState extends ConsumerState<DetailPane> {
     );
     if (confirmed != true || !mounted) return;
     await bridge.deleteEntries(uuidHexes: [uuid]);
+    Logger.i('entry deleted');
     ref.read(selectedEntryProvider.notifier).select(null);
     if (mounted && Navigator.of(context).canPop()) Navigator.pop(context);
     await ref.read(entriesProvider.notifier).refresh();
@@ -167,7 +171,7 @@ class _DetailPaneState extends ConsumerState<DetailPane> {
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
-              child: Text('${l10n.errorLoading}: $_error'),
+              child: Text(friendlyError(l10n, _error!)),
             ),
             FilledButton.tonal(
               onPressed: _load,

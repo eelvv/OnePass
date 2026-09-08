@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../shared/errors.dart';
+import '../../shared/logger.dart';
 import '../../src/rust/api/dto.dart';
 import '../../src/rust/api/vault.dart' as bridge;
 import '../../state/providers.dart';
@@ -49,6 +51,7 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
   }
 
   Future<void> _lock() async {
+    Logger.i('manual lock');
     await bridge.lockVault();
     ref.read(lockedProvider.notifier).setLocked(true);
     ref.read(selectedEntryProvider.notifier).select(null);
@@ -82,6 +85,7 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
     );
     if (confirmed != true) return;
     final removed = await bridge.deleteEntries(uuidHexes: _selected.toList());
+    Logger.i('deleted $removed entries');
     if (!mounted) return;
     setState(() => _selected.clear());
     if (removed > BigInt.zero) {
@@ -92,22 +96,25 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
 
   Future<void> _importFile() async {
     final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
     final files = await FilePicker.pickFiles(type: FileType.any);
     final picked = files.firstOrNull;
-    if (picked == null) return;
+    final srcPath = picked?.path;
+    if (picked == null || srcPath == null) return;
     final bytes = await picked.readAsBytes();
     try {
       final imported = await bridge.importFromBytes(bytes: bytes);
       await _afterMutation();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(content: Text(l10n.imported(imported.length))),
         );
       }
-    } catch (e) {
+    } catch (e, st) {
+      Logger.e('kdbx/2fa file import failed', e, st);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${l10n.importFailed}: $e')),
+        messenger.showSnackBar(
+          SnackBar(content: Text(friendlyError(l10n, e))),
         );
       }
     }
@@ -115,6 +122,7 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
 
   Future<void> _importUriText() async {
     final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
     final controller = TextEditingController();
     final text = await showDialog<String>(
       context: context,
@@ -142,14 +150,15 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
       final imported = await bridge.importFromOtpauthText(text: text);
       await _afterMutation();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(content: Text(l10n.imported(imported.length))),
         );
       }
-    } catch (e) {
+    } catch (e, st) {
+      Logger.e('otpauth text import failed', e, st);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${l10n.importFailed}: $e')),
+        messenger.showSnackBar(
+          SnackBar(content: Text(friendlyError(l10n, e))),
         );
       }
     }
@@ -157,19 +166,19 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
 
   Future<void> _exportOtpauth() async {
     final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
     final text = await bridge.exportOtpauthText();
     await SharePlus.instance.share(
       ShareParams(text: text, subject: 'OnePass otpauth'),
     );
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.exportShared)),
-      );
-    }
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.exportShared)),
+    );
   }
 
   Future<void> _exportAegis() async {
     final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
     final bytes = await bridge.exportAegis();
     final tmp = '${Directory.systemTemp.path}/onepass-aegis-'
         '${DateTime.now().millisecondsSinceEpoch}.json';
@@ -180,11 +189,81 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
         subject: 'OnePass Aegis export',
       ),
     );
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.exportShared)),
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.exportShared)),
+    );
+  }
+
+  Future<void> _importKdbx() async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final files = await FilePicker.pickFiles(type: FileType.any);
+    final picked = files.firstOrNull;
+    final srcPath = picked?.path;
+    if (picked == null || srcPath == null) return;
+
+    if (!mounted) return;
+    final pwController = TextEditingController();
+    final password = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.importKdbx),
+        content: TextField(
+          controller: pwController,
+          obscureText: true,
+          autofocus: true,
+          decoration: InputDecoration(labelText: l10n.vaultPasswordPrompt),
+          onSubmitted: (v) => Navigator.pop(context, v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, pwController.text),
+            child: Text(l10n.importKdbx),
+          ),
+        ],
+      ),
+    );
+    final vaultPassword = password ?? '';
+    if (vaultPassword.isEmpty) return;
+
+    final target = await ref.read(vaultPathProvider.future);
+    try {
+      final entries = await bridge.importVaultFile(
+        path: srcPath,
+        password: vaultPassword.codeUnits,
+        target: target,
       );
+      Logger.i('kdbx imported (${entries.length} entries)');
+      ref.read(entriesProvider.notifier).apply(entries);
+      await bridge.saveSession();
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.vaultImported)),
+        );
+      }
+    } catch (e, st) {
+      Logger.e('kdbx import failed', e, st);
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(friendlyError(l10n, e))),
+        );
+      }
     }
+  }
+
+  Future<void> _exportKdbx() async {
+    final path = await ref.read(vaultPathProvider.future);
+    Logger.i('exporting vault copy');
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(path, mimeType: 'application/octet-stream')],
+        subject: 'OnePass vault',
+      ),
+    );
   }
 
   void _showIoSheet() {
@@ -210,6 +289,22 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
               onTap: () {
                 Navigator.pop(context);
                 _importUriText();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.folder_zip_outlined),
+              title: Text(l10n.importKdbx),
+              onTap: () {
+                Navigator.pop(context);
+                _importKdbx();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.save_alt),
+              title: Text(l10n.exportKdbx),
+              onTap: () {
+                Navigator.pop(context);
+                _exportKdbx();
               },
             ),
             ListTile(

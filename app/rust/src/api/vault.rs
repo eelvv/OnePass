@@ -20,6 +20,16 @@ pub async fn open_vault(path: String, password: Vec<u8>) -> BridgeResult<Vec<Ent
     logic::core_open(&path, Zeroizing::new(password))
 }
 
+/// Imports a picked `.kdbx` file: validates the password against it, then
+/// adopts it as the session and writes a fresh copy to `target` on save.
+pub async fn import_vault_file(
+    path: String,
+    password: Vec<u8>,
+    target: String,
+) -> BridgeResult<Vec<EntryDto>> {
+    logic::core_import_vault_file(&path, Zeroizing::new(password), &target)
+}
+
 /// Creates a new vault in memory. Call `save_session` to write it to disk.
 pub async fn create_vault(path: String, name: String, password: Vec<u8>) -> BridgeResult<()> {
     logic::core_create(&path, &name, Zeroizing::new(password))

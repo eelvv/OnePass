@@ -22,7 +22,13 @@
   "delete": "Delete",
   "deleteSelected": "Delete selected",
   "deleteConfirm": "Delete {count} selected entries?",
-  "@deleteConfirm": { "placeholders": { "count": { "type": "int" } } },
+  "@deleteConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "deleteEntryConfirm": "Delete this entry?",
   "cancel": "Cancel",
   "save": "Save",
@@ -34,7 +40,13 @@
   "importPickUriText": "Paste otpauth:// URIs",
   "importUriHint": "One otpauth:// URI per line",
   "imported": "Imported {count} entries",
-  "@imported": { "placeholders": { "count": { "type": "int" } } },
+  "@imported": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "importFailed": "Import failed",
   "exportOtpauth": "2FA as otpauth:// URIs",
   "exportAegis": "2FA as Aegis JSON",
@@ -78,5 +90,18 @@
   "selectToDelete": "Long-press an entry to multi-select",
   "errorLoading": "Failed to load",
   "retry": "Retry",
-  "otpCopied": "One-time code copied"
+  "otpCopied": "One-time code copied",
+  "errorGeneric": "Operation failed",
+  "errorFileFormat": "This file is not a valid vault, or it is corrupted",
+  "errorIo": "File read/write failed",
+  "errorInvalidInput": "Invalid input",
+  "importKdbx": "Import vault (.kdbx)",
+  "exportKdbx": "Export vault (.kdbx) copy",
+  "vaultImported": "Vault imported",
+  "vaultPasswordPrompt": "Password of the vault to import",
+  "logs": "Logs",
+  "logFile": "Log file",
+  "shareLogs": "Share logs",
+  "clearLogs": "Clear logs",
+  "logsCleared": "Logs cleared"
 }

@@ -76,5 +76,18 @@
   "selectToDelete": "长按条目可多选删除",
   "errorLoading": "加载失败",
   "retry": "重试",
-  "otpCopied": "验证码已复制"
+  "otpCopied": "验证码已复制",
+  "errorGeneric": "操作失败",
+  "errorFileFormat": "该文件不是有效的密码库，或已损坏",
+  "errorIo": "文件读写失败",
+  "errorInvalidInput": "输入无效",
+  "importKdbx": "导入密码库（.kdbx）",
+  "exportKdbx": "导出密码库副本（.kdbx）",
+  "vaultImported": "密码库已导入",
+  "vaultPasswordPrompt": "输入该密码库的主密码",
+  "logs": "日志",
+  "logFile": "日志文件",
+  "shareLogs": "分享日志",
+  "clearLogs": "清空日志",
+  "logsCleared": "日志已清空"
 }

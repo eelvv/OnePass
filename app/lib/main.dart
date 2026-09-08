@@ -3,7 +3,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
+
 import 'l10n/app_localizations.dart';
+import 'shared/logger.dart';
 import 'src/rust/api/vault.dart' as bridge;
 import 'src/rust/frb_generated.dart';
 import 'features/lock/lock_screen.dart';
@@ -13,6 +18,16 @@ import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // File logging first, then global error hooks - both feed diagnostics.
+  await Logger.init();
+  FlutterError.onError = (details) {
+    Logger.e('flutter error', details.exception, details.stack);
+    FlutterError.presentError(details);
+  };
+  PlatformDispatcher.instance.onError = (e, st) {
+    Logger.e('uncaught platform error', e, st);
+    return true;
+  };
   // Bootstrap the Rust core: loads librust_lib_onepass.so into the process.
   // All engine logic lives in Rust; Dart only calls across the FFI boundary.
   await RustLib.init();
@@ -45,14 +60,15 @@ class _OnePassAppState extends ConsumerState<OnePassApp>
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
     super.didChangeAppLifecycleState(state);
     // Auto-lock: drop the Rust session (password zeroized) when the app is
     // backgrounded, if the user has not disabled it.
     if (state == AppLifecycleState.paused &&
         ref.read(settingsProvider).lockOnBackground &&
         !ref.read(lockedProvider)) {
-      bridge.lockVault();
+      Logger.i('auto-lock on background');
+      await bridge.lockVault();
       ref.read(lockedProvider.notifier).setLocked(true);
     }
   }

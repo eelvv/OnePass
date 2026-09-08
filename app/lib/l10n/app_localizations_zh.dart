@@ -243,4 +243,43 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get otpCopied => '验证码已复制';
+
+  @override
+  String get errorGeneric => '操作失败';
+
+  @override
+  String get errorFileFormat => '该文件不是有效的密码库，或已损坏';
+
+  @override
+  String get errorIo => '文件读写失败';
+
+  @override
+  String get errorInvalidInput => '输入无效';
+
+  @override
+  String get importKdbx => '导入密码库（.kdbx）';
+
+  @override
+  String get exportKdbx => '导出密码库副本（.kdbx）';
+
+  @override
+  String get vaultImported => '密码库已导入';
+
+  @override
+  String get vaultPasswordPrompt => '输入该密码库的主密码';
+
+  @override
+  String get logs => '日志';
+
+  @override
+  String get logFile => '日志文件';
+
+  @override
+  String get shareLogs => '分享日志';
+
+  @override
+  String get clearLogs => '清空日志';
+
+  @override
+  String get logsCleared => '日志已清空';
 }

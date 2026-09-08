@@ -243,4 +243,44 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get otpCopied => 'One-time code copied';
+
+  @override
+  String get errorGeneric => 'Operation failed';
+
+  @override
+  String get errorFileFormat =>
+      'This file is not a valid vault, or it is corrupted';
+
+  @override
+  String get errorIo => 'File read/write failed';
+
+  @override
+  String get errorInvalidInput => 'Invalid input';
+
+  @override
+  String get importKdbx => 'Import vault (.kdbx)';
+
+  @override
+  String get exportKdbx => 'Export vault (.kdbx) copy';
+
+  @override
+  String get vaultImported => 'Vault imported';
+
+  @override
+  String get vaultPasswordPrompt => 'Password of the vault to import';
+
+  @override
+  String get logs => 'Logs';
+
+  @override
+  String get logFile => 'Log file';
+
+  @override
+  String get shareLogs => 'Share logs';
+
+  @override
+  String get clearLogs => 'Clear logs';
+
+  @override
+  String get logsCleared => 'Logs cleared';
 }

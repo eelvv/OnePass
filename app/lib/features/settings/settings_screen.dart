@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../../shared/errors.dart';
+import '../../shared/logger.dart';
 import '../../src/rust/api/vault.dart' as bridge;
 import '../../state/providers.dart';
 import '../../theme/app_theme.dart';
@@ -24,6 +27,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _changePassword() async {
     final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
     final value = _newPassword.text;
     if (value.isEmpty) return;
     setState(() => _busy = true);
@@ -37,11 +41,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
     if (!mounted) return;
     setState(() => _busy = false);
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(error ?? l10n.passwordChanged),
-      ));
+    if (error != null) {
+      Logger.e('change master password failed', error);
+      messenger.showSnackBar(
+        SnackBar(content: Text(friendlyError(l10n, error))),
+      );
+    } else {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.passwordChanged)),
+      );
+    }
   }
 
   @override
@@ -180,6 +189,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ],
                   ),
+                ),
+              ),
+              _SectionHeader(l10n.logs),
+              Card(
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.description_outlined),
+                      title: Text(l10n.logFile),
+                      subtitle: FutureBuilder<String>(
+                        future: logFilePath(),
+                        builder: (context, snapshot) =>
+                            Text(snapshot.data ?? '…'),
+                      ),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.share_outlined),
+                      title: Text(l10n.shareLogs),
+                      onTap: () async {
+                        final path = await logFilePath();
+                        await SharePlus.instance.share(
+                          ShareParams(files: [XFile(path)]),
+                        );
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.delete_sweep_outlined),
+                      title: Text(l10n.clearLogs),
+                      onTap: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        await Logger.clear();
+                        messenger.showSnackBar(
+                          SnackBar(content: Text(l10n.logsCleared)),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
               _SectionHeader(l10n.about),

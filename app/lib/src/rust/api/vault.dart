@@ -16,6 +16,18 @@ Future<List<EntryDto>> openVault({
 }) =>
     RustLib.instance.api.crateApiVaultOpenVault(path: path, password: password);
 
+/// Imports a picked `.kdbx` file: validates the password against it, then
+/// adopts it as the session and writes a fresh copy to `target` on save.
+Future<List<EntryDto>> importVaultFile({
+  required String path,
+  required List<int> password,
+  required String target,
+}) => RustLib.instance.api.crateApiVaultImportVaultFile(
+  path: path,
+  password: password,
+  target: target,
+);
+
 /// Creates a new vault in memory. Call `save_session` to write it to disk.
 Future<void> createVault({
   required String path,

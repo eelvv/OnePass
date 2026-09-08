@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../shared/errors.dart';
+import '../../shared/logger.dart';
 import '../../src/rust/api/vault.dart' as bridge;
 import '../../state/providers.dart';
 
@@ -63,6 +65,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     String? error;
     try {
       if (_createMode) {
+        Logger.i('creating vault');
         await bridge.createVault(
           path: path,
           name: _nameController.text.trim().isEmpty
@@ -70,18 +73,20 @@ class _LockScreenState extends ConsumerState<LockScreen> {
               : _nameController.text.trim(),
           password: password.codeUnits,
         );
+        Logger.i('vault created');
       } else {
+        Logger.i('unlock attempt');
         final entries = await bridge.openVault(
           path: path,
           password: password.codeUnits,
         );
         ref.read(entriesProvider.notifier).apply(entries);
+        Logger.i('unlocked (${entries.length} entries)');
       }
       await bridge.saveSession();
-    } catch (e) {
-      error = e.toString().contains('wrong password')
-          ? l10n.wrongPassword
-          : e.toString();
+    } catch (e, st) {
+      Logger.e('unlock/create failed', e, st);
+      error = friendlyError(l10n, e);
     }
 
     if (!mounted) return;

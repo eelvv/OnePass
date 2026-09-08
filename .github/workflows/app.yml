@@ -91,11 +91,16 @@ jobs:
         working-directory: app
         run: flutter build apk --release --target-platform android-arm64
 
+      # Distribution naming matches the CLI convention
+      # (onepass-cli-<platform>.tar.gz): the version lives on the tag.
+      - name: Rename APK for distribution
+        run: cp app/build/app/outputs/flutter-apk/app-release.apk onepass-app-android-arm64.apk
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: onepass-apk-${{ github.sha }}
-          path: app/build/app/outputs/flutter-apk/app-release.apk
+          name: onepass-app-android-arm64
+          path: onepass-app-android-arm64.apk
           if-no-files-found: error
 
       - name: Attach APK to GitHub release
@@ -103,4 +108,4 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ inputs.tag }}
-          files: app/build/app/outputs/flutter-apk/app-release.apk
+          files: onepass-app-android-arm64.apk

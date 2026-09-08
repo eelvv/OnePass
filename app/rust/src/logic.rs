@@ -98,6 +98,37 @@ pub(crate) fn core_save() -> BridgeResult<bool> {
     Ok(true)
 }
 
+/// Opens a picked `.kdbx` file, validates the password against it, and
+/// adopts it as the session vault. `target` becomes the session file path
+/// so the next save materializes a fresh copy there; the file on disk at
+/// the target is never replaced with an unopenable one.
+pub(crate) fn core_import_vault_file(
+    path: &str,
+    password: Zeroizing<Vec<u8>>,
+    target: &str,
+) -> BridgeResult<Vec<EntryDto>> {
+    let data =
+        std::fs::read(path).map_err(|e| BridgeError::new(ErrorKind::Io, format!("read {path}: {e}")))?;
+    let vault = onepass_engine::db::open(&data, password.as_slice())?;
+    let dtos = entries_to_dtos(&vault);
+
+    let mut guard = lock_session();
+    if guard.is_some() {
+        return Err(BridgeError::new(
+            ErrorKind::SessionState,
+            "a vault is already open".to_string(),
+        ));
+    }
+    *guard = Some(SessionState {
+        vault,
+        password,
+        file_path: target.to_string(),
+        dirty: true,
+    });
+    drop(guard);
+    Ok(dtos)
+}
+
 pub(crate) fn core_lock() -> BridgeResult<()> {
     *lock_session() = None; // SessionState drops: password zeroized
     Ok(())

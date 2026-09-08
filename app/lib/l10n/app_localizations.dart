@@ -559,6 +559,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'One-time code copied'**
   String get otpCopied;
+
+  /// No description provided for @errorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Operation failed'**
+  String get errorGeneric;
+
+  /// No description provided for @errorFileFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'This file is not a valid vault, or it is corrupted'**
+  String get errorFileFormat;
+
+  /// No description provided for @errorIo.
+  ///
+  /// In en, this message translates to:
+  /// **'File read/write failed'**
+  String get errorIo;
+
+  /// No description provided for @errorInvalidInput.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid input'**
+  String get errorInvalidInput;
+
+  /// No description provided for @importKdbx.
+  ///
+  /// In en, this message translates to:
+  /// **'Import vault (.kdbx)'**
+  String get importKdbx;
+
+  /// No description provided for @exportKdbx.
+  ///
+  /// In en, this message translates to:
+  /// **'Export vault (.kdbx) copy'**
+  String get exportKdbx;
+
+  /// No description provided for @vaultImported.
+  ///
+  /// In en, this message translates to:
+  /// **'Vault imported'**
+  String get vaultImported;
+
+  /// No description provided for @vaultPasswordPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Password of the vault to import'**
+  String get vaultPasswordPrompt;
+
+  /// No description provided for @logs.
+  ///
+  /// In en, this message translates to:
+  /// **'Logs'**
+  String get logs;
+
+  /// No description provided for @logFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Log file'**
+  String get logFile;
+
+  /// No description provided for @shareLogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Share logs'**
+  String get shareLogs;
+
+  /// No description provided for @clearLogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear logs'**
+  String get clearLogs;
+
+  /// No description provided for @logsCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Logs cleared'**
+  String get logsCleared;
 }
 
 class _AppLocalizationsDelegate
