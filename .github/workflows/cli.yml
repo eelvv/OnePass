@@ -1,0 +1,109 @@
+name: CLI build
+
+# Reusable CLI build pipeline. Called by release.yml on component/bundle tags
+# (`cli-v*`, `v*`), and manually runnable via workflow_dispatch.
+#
+# Always runs the test suite first, then builds the three platform binaries
+# and attaches them to the Release of the triggering tag (when the run is on
+# a tag ref and uploading is enabled).
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: "Upload artifacts to a Release (only valid when running on a tag ref)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: onepass
+          shared-key: rust
+          job: shared
+          cache-on-failure: true
+
+      - name: Run tests
+        run: cargo test --workspace
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: onepass-cli-linux-x86_64.tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact: onepass-cli-macos-aarch64.tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: onepass-cli-windows-x86_64.tar.gz
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: onepass
+          shared-key: rust
+          job: shared
+          cache-on-failure: true
+
+      - name: Build release binary
+        run: cargo build --release --bin onepass-cli --target ${{ matrix.target }}
+
+      - name: Stage artifact
+        shell: bash
+        run: |
+          ARTIFACT="${{ matrix.artifact }}"
+          BINARY="target/${{ matrix.target }}/release/onepass-cli"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            BINARY="$BINARY.exe"
+          fi
+
+          NAME="${ARTIFACT%.tar.gz}"
+          STAGING="staging/$NAME"
+          mkdir -p "$STAGING"
+          cp "$BINARY" "$STAGING/onepass-cli"
+          chmod +x "$STAGING/onepass-cli"
+
+          # Strip if available (skip on Windows; not needed)
+          if [ "$RUNNER_OS" != "Windows" ]; then
+            command -v strip >/dev/null 2>&1 && strip "$STAGING/onepass-cli" || true
+          fi
+
+          tar -czf "$ARTIFACT" -C staging "$NAME"
+          rm -rf staging
+
+      - name: Upload to release
+        if: >-
+          (github.event_name == 'workflow_call' || inputs.upload == true)
+          && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: ${{ matrix.artifact }}

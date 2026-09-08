@@ -1,5 +1,7 @@
 # OnePass
 
+[![Rust CI](https://github.com/eelvv/OnePass/actions/workflows/ci.yml/badge.svg)](https://github.com/eelvv/OnePass/actions/workflows/ci.yml)
+
 An offline password manager with built-in two-factor authentication (2FA)
 code generation. It reads and writes standard KeePass `.kdbx` vaults, so your
 passwords stay compatible with the wider KeePass ecosystem.
@@ -41,13 +43,28 @@ cargo clippy --workspace
 cargo fmt --all
 ```
 
-## CI
+## Releases & versioning
 
-[![Rust CI](https://github.com/eelvv/OnePass/actions/workflows/ci.yml/badge.svg)](https://github.com/eelvv/OnePass/actions/workflows/ci.yml)
+Each component carries its own semver (`onepass-cli` 0.1.3, `onepass-engine`
+0.1.1) and is released independently through component tags:
 
-Release binaries for Linux (x86_64), macOS (aarch64) and Windows (x86_64) are
-built automatically on version tags (`v*` for the whole workspace, `cli-v*` for
-the CLI on its own).
+| Tag | Builds | Example |
+|---|---|---|
+| `cli-v*` | CLI binaries only | `cli-v0.1.3` |
+| `app-v*` / `desktop-v*` | future components | — |
+| `v*` | global bundle: every component in one release | `v0.2.0` |
+
+Release together by pushing several tags at once:
+
+```bash
+git tag cli-v0.1.3 app-v0.1.0
+git push origin cli-v0.1.3 app-v0.1.0
+```
+
+`onepass-engine` is a library and is never tagged on its own; the engine
+version bundled in a binary is noted in that release's notes. Binaries for
+Linux (x86_64), macOS (aarch64) and Windows (x86_64) are attached to every
+CLI/bundle release automatically.
 
 ## Acknowledgements
 

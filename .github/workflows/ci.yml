@@ -1,31 +1,63 @@
 name: Rust CI
 
+# Push to main: fast checks only (fmt + clippy, warmed by the shared cache).
+# Pull requests / manual runs: also run the full test suite.
+# Release builds (cli.yml) always run tests before producing binaries.
+
 on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main ]
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
-    
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-      
-    - name: Build
-      run: cargo build --verbose
-      
-    - name: Run tests
-      run: cargo test --verbose
-      
-    - name: Check formatting
-      run: cargo fmt --all -- --check
-      
-    - name: Clippy lint
-      run: cargo clippy -- -D warnings
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      # Shared cache: the key is derived from Cargo.lock, so the same
+      # dependency set reuses one cache across all workflows (cli.yml shares
+      # the same prefix-key / shared-key / job triple).
+      - name: Cache build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: onepass
+          shared-key: rust
+          job: shared
+          cache-on-failure: true
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy lint
+        run: cargo clippy --workspace -- -D warnings
+
+  test:
+    # Full suite on PRs and manual runs; pushes to main stay light.
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: onepass
+          shared-key: rust
+          job: shared
+          cache-on-failure: true
+
+      - name: Run tests
+        run: cargo test --workspace
