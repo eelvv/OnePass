@@ -34,5 +34,8 @@ fn open_example() {
 fn wrong_password_fails() {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../examples/example1.kdbx");
     let data = std::fs::read(path).expect("example file not found");
-    assert!(open(&data, b"wrong-password").is_err());
+    assert!(matches!(
+        onepass_engine::db::open(&data, b"wrong-password"),
+        Err(onepass_engine::Error::WrongPassword)
+    ));
 }

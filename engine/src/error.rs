@@ -7,6 +7,14 @@ use std::fmt;
 pub enum Error {
     /// Encoding/decoding failure (base32/hex/percent).
     Encoding(String),
+    /// Vault authentication failed: the supplied password/key does not match
+    /// the credential data (header HMAC, block HMAC, or padding check).
+    WrongPassword,
+    /// The vault file is structurally invalid (bad magic, truncation,
+    /// unsupported structure, XML/gzip failure, checksum mismatch).
+    Format(String),
+    /// A caller-supplied parameter is invalid (e.g. empty password policy).
+    InvalidParameter(String),
     /// Secret is empty or otherwise unusable.
     InvalidSecret,
     /// Secret length not accepted (Yandex expects 16 or 26 bytes).
@@ -35,6 +43,9 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::Encoding(msg) => write!(f, "encoding error: {msg}"),
+            Error::WrongPassword => write!(f, "wrong password (or key) for this vault"),
+            Error::Format(msg) => write!(f, "invalid vault format: {msg}"),
+            Error::InvalidParameter(msg) => write!(f, "invalid parameter: {msg}"),
             Error::InvalidSecret => write!(f, "secret is empty or invalid"),
             Error::InvalidSecretLength(len) => {
                 write!(f, "invalid secret length: {len} bytes")

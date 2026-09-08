@@ -9,7 +9,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use onepass_engine::db::{
     detect_and_import, entry_from_otp_params, entry_from_otpauth_uri, entry_otp, export_aegis_json,
     export_otpauth_uris, generate_password, otp_entries, random_bytes, save, Entry, Field, Group,
-    Vault,
+    Vault, NOTES, PASSWORD, TITLE, URL, USER_NAME,
 };
 use onepass_engine::encoding::base32;
 use onepass_engine::otp::{HashAlgorithm, OtpKind, OtpParams, DEFAULT_DIGITS, DEFAULT_PERIOD};
@@ -307,9 +307,9 @@ impl App {
 
         // Clipboard actions target the *selected* entry regardless of panel.
         match key.code {
-            KeyCode::Char('u') => return self.copy_field("UserName", "Username"),
-            KeyCode::Char('p') => return self.copy_field("Password", "Password"),
-            KeyCode::Char('U') => return self.copy_field("URL", "URL"),
+            KeyCode::Char('u') => return self.copy_field(USER_NAME, "Username"),
+            KeyCode::Char('p') => return self.copy_field(PASSWORD, "Password"),
+            KeyCode::Char('U') => return self.copy_field(URL, "URL"),
             KeyCode::Char('o') => return self.copy_otp_code(),
             _ => {}
         }
@@ -489,11 +489,11 @@ impl App {
             self.form.password.clone()
         };
         let specs = [
-            ("Title", self.form.title.clone(), false),
-            ("UserName", self.form.username.clone(), false),
-            ("Password", password, true),
-            ("URL", self.form.url.clone(), false),
-            ("Notes", self.form.notes.clone(), false),
+            (TITLE, self.form.title.clone(), false),
+            (USER_NAME, self.form.username.clone(), false),
+            (PASSWORD, password, true),
+            (URL, self.form.url.clone(), false),
+            (NOTES, self.form.notes.clone(), false),
         ];
 
         match editing {
@@ -501,12 +501,11 @@ impl App {
                 let entry = find_by_uuid_mut(&mut self.vault.root, &uuid)
                     .ok_or_else(|| "entry not found".to_string())?;
                 for (key, value, protected) in specs {
-                    set_field(entry, key, &value, protected);
+                    entry.set_field(key, &value, protected);
                 }
                 // Drop optional rows the user cleared.
                 entry.fields.retain(|f| {
-                    matches!(f.key.as_str(), "Title" | "UserName" | "Password")
-                        || !f.value.is_empty()
+                    matches!(f.key.as_str(), TITLE | USER_NAME | PASSWORD) || !f.value.is_empty()
                 });
                 self.dirty = true;
                 self.message = Some("Entry updated (remember to save)".to_string());
@@ -517,8 +516,7 @@ impl App {
                     ..Default::default()
                 };
                 for (key, value, protected) in specs {
-                    if !value.is_empty() || key == "Title" || key == "UserName" || key == "Password"
-                    {
+                    if !value.is_empty() || matches!(key, TITLE | USER_NAME | PASSWORD) {
                         entry.fields.push(Field {
                             key: key.to_string(),
                             value,
@@ -672,11 +670,11 @@ impl App {
         form.editing_uuid = Some(entry.uuid.clone());
         for f in &entry.fields {
             match f.key.as_str() {
-                "Title" => form.title = f.value.clone(),
-                "UserName" => form.username = f.value.clone(),
-                "Password" => form.password = f.value.clone(),
-                "URL" => form.url = f.value.clone(),
-                "Notes" => form.notes = f.value.clone(),
+                TITLE => form.title = f.value.clone(),
+                USER_NAME => form.username = f.value.clone(),
+                PASSWORD => form.password = f.value.clone(),
+                URL => form.url = f.value.clone(),
+                NOTES => form.notes = f.value.clone(),
                 _ => {}
             }
         }
@@ -1069,19 +1067,6 @@ fn build_otp_entry(form: &AddForm) -> Result<Entry, String> {
 }
 
 /// Inserts or updates a field on an entry.
-fn set_field(entry: &mut Entry, key: &str, value: &str, protected: bool) {
-    if let Some(f) = entry.fields.iter_mut().find(|f| f.key == key) {
-        f.value = value.to_string();
-        f.protected = protected;
-    } else {
-        entry.fields.push(Field {
-            key: key.to_string(),
-            value: value.to_string(),
-            protected,
-        });
-    }
-}
-
 fn find_by_uuid_mut<'a>(g: &'a mut Group, uuid: &[u8]) -> Option<&'a mut Entry> {
     if let Some(pos) = g.entries.iter().position(|e| e.uuid == uuid) {
         return Some(&mut g.entries[pos]);

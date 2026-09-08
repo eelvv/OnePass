@@ -8,6 +8,7 @@ use base64::Engine;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 
+use crate::db::random_bytes;
 use crate::db::stream::protected::ProtectedStream;
 use crate::error::{Error, Result};
 
@@ -16,6 +17,19 @@ use crate::error::{Error, Result};
 pub struct Vault {
     pub database_name: String,
     pub root: Group,
+}
+
+impl Vault {
+    /// Creates a new empty vault with a fresh root group UUID.
+    pub fn create(database_name: &str) -> Result<Self> {
+        Ok(Self {
+            database_name: database_name.to_string(),
+            root: Group {
+                uuid: random_bytes(16)?,
+                ..Default::default()
+            },
+        })
+    }
 }
 
 /// A group (folder) of entries and nested groups.
@@ -34,7 +48,17 @@ pub struct Group {
 pub struct Entry {
     pub uuid: Vec<u8>,
     pub icon_id: u32,
+    pub times: Times,
     pub fields: Vec<Field>,
+}
+
+/// Entry timestamps as stored by KeePass (seconds in the .NET epoch).
+///
+/// Zero means "unknown"; such values are rewritten as "now" on save.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Times {
+    pub creation: i64,
+    pub last_modification: i64,
 }
 
 /// A string field (Title, UserName, Password, URL, Notes, otp, ...).
@@ -69,6 +93,20 @@ impl Entry {
     pub fn otp(&self) -> Option<&str> {
         self.get("otp")
     }
+
+    /// Sets (or adds) a field by key, replacing value and protected flag.
+    pub fn set_field(&mut self, key: &str, value: &str, protected: bool) {
+        if let Some(f) = self.fields.iter_mut().find(|f| f.key == key) {
+            f.value = value.to_string();
+            f.protected = protected;
+        } else {
+            self.fields.push(Field {
+                key: key.to_string(),
+                value: value.to_string(),
+                protected,
+            });
+        }
+    }
 }
 
 /// What the next text node belongs to.
@@ -83,6 +121,8 @@ enum Capture {
     IconId,
     FieldKey,
     FieldValue { protected: bool },
+    CreationTime,
+    LastModificationTime,
 }
 
 /// Parses the KDBX XML into a [`Vault`].
@@ -94,6 +134,7 @@ pub fn parse(xml: &[u8], stream: &mut ProtectedStream) -> Result<Vault> {
         current_entry: None,
         current_field: None,
         in_entry: false,
+        in_entry_times: false,
         capture: Capture::None,
     };
 
@@ -119,6 +160,7 @@ struct Parser<'a> {
     current_entry: Option<Entry>,
     current_field: Option<Field>,
     in_entry: bool,
+    in_entry_times: bool,
     capture: Capture,
 }
 
@@ -153,6 +195,11 @@ impl Parser<'_> {
                 };
             }
             b"IconID" => self.capture = Capture::IconId,
+            b"Times" if self.in_entry => self.in_entry_times = true,
+            b"CreationTime" if self.in_entry_times => self.capture = Capture::CreationTime,
+            b"LastModificationTime" if self.in_entry_times => {
+                self.capture = Capture::LastModificationTime
+            }
             _ => self.capture = Capture::None,
         }
     }
@@ -211,6 +258,16 @@ impl Parser<'_> {
                     e.icon_id = decode_text(bytes).trim().parse().unwrap_or(0);
                 }
             }
+            Capture::CreationTime => {
+                if let Some(e) = self.current_entry.as_mut() {
+                    e.times.creation = decode_date(bytes);
+                }
+            }
+            Capture::LastModificationTime => {
+                if let Some(e) = self.current_entry.as_mut() {
+                    e.times.last_modification = decode_date(bytes);
+                }
+            }
             Capture::FieldKey => {
                 if let Some(f) = self.current_field.as_mut() {
                     f.key = decode_text(bytes);
@@ -235,6 +292,7 @@ impl Parser<'_> {
 
     fn end(&mut self, name: &[u8]) {
         match name {
+            b"Times" => self.in_entry_times = false,
             b"String" => {
                 if let Some(entry) = self.current_entry.as_mut() {
                     if let Some(field) = self.current_field.take() {
@@ -283,6 +341,16 @@ fn decode_base64(bytes: &[u8]) -> Vec<u8> {
     base64::engine::general_purpose::STANDARD
         .decode(&cleaned)
         .unwrap_or_default()
+}
+
+/// Decodes a KeePass date (8-byte little-endian .NET epoch seconds, base64).
+fn decode_date(bytes: &[u8]) -> i64 {
+    let v = decode_base64(bytes);
+    if v.len() == 8 {
+        i64::from_le_bytes(v.try_into().expect("len checked above"))
+    } else {
+        0
+    }
 }
 
 fn xml_unescape(s: &str) -> String {
@@ -357,7 +425,7 @@ fn write_group(s: &mut String, g: &Group, stream: &mut ProtectedStream) -> Resul
         write_str_elem(s, "Notes", &g.notes);
     }
     write_u32_elem(s, "IconID", 48);
-    write_times(s);
+    write_times(s, &Times::default());
     s.push_str("<IsExpanded>True</IsExpanded>\n");
     for e in &g.entries {
         write_entry(s, e, stream)?;
@@ -377,7 +445,7 @@ fn write_entry(s: &mut String, e: &Entry, stream: &mut ProtectedStream) -> Resul
     s.push_str("<BackgroundColor/>\n");
     s.push_str("<OverrideURL/>\n");
     s.push_str("<Tags/>\n");
-    write_times(s);
+    write_times(s, &e.times);
     for f in &e.fields {
         s.push_str("<String>\n");
         write_str_elem(s, "Key", &f.key);
@@ -404,11 +472,21 @@ fn write_entry(s: &mut String, e: &Entry, stream: &mut ProtectedStream) -> Resul
     Ok(())
 }
 
-fn write_times(s: &mut String) {
+fn write_times(s: &mut String, times: &Times) {
     let now = dotnet_now();
+    let creation = if times.creation == 0 {
+        now
+    } else {
+        times.creation
+    };
+    let last_modification = if times.last_modification == 0 {
+        now
+    } else {
+        times.last_modification
+    };
     s.push_str("<Times>\n");
-    write_date(s, "LastModificationTime", now);
-    write_date(s, "CreationTime", now);
+    write_date(s, "LastModificationTime", last_modification);
+    write_date(s, "CreationTime", creation);
     write_date(s, "LastAccessTime", now);
     write_date(s, "ExpiryTime", now);
     s.push_str("<Expires>False</Expires>\n");
