@@ -3,8 +3,11 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/dto.dart';
 import 'api/engine.dart';
+import 'api/error.dart';
 import 'api/simple.dart';
+import 'api/vault.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -26,7 +29,79 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  bool dco_decode_bool(dynamic raw);
+
+  @protected
+  OtpEntryInput dco_decode_box_autoadd_otp_entry_input(dynamic raw);
+
+  @protected
+  OtpInfoDto dco_decode_box_autoadd_otp_info_dto(dynamic raw);
+
+  @protected
+  PasswordEntryInput dco_decode_box_autoadd_password_entry_input(dynamic raw);
+
+  @protected
+  PasswordPolicyDto dco_decode_box_autoadd_password_policy_dto(dynamic raw);
+
+  @protected
+  BridgeError dco_decode_bridge_error(dynamic raw);
+
+  @protected
+  EntryDetail dco_decode_entry_detail(dynamic raw);
+
+  @protected
+  EntryDto dco_decode_entry_dto(dynamic raw);
+
+  @protected
+  ErrorKind dco_decode_error_kind(dynamic raw);
+
+  @protected
+  FieldDto dco_decode_field_dto(dynamic raw);
+
+  @protected
+  int dco_decode_i_32(dynamic raw);
+
+  @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw);
+
+  @protected
+  List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<EntryDto> dco_decode_list_entry_dto(dynamic raw);
+
+  @protected
+  List<FieldDto> dco_decode_list_field_dto(dynamic raw);
+
+  @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  OtpInfoDto? dco_decode_opt_box_autoadd_otp_info_dto(dynamic raw);
+
+  @protected
+  OtpEntryInput dco_decode_otp_entry_input(dynamic raw);
+
+  @protected
+  OtpInfoDto dco_decode_otp_info_dto(dynamic raw);
+
+  @protected
+  PasswordEntryInput dco_decode_password_entry_input(dynamic raw);
+
+  @protected
+  PasswordPolicyDto dco_decode_password_policy_dto(dynamic raw);
+
+  @protected
+  int dco_decode_u_32(dynamic raw);
+
+  @protected
+  BigInt dco_decode_u_64(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -35,10 +110,97 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void dco_decode_unit(dynamic raw);
 
   @protected
+  BigInt dco_decode_usize(dynamic raw);
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
+  bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
+  OtpEntryInput sse_decode_box_autoadd_otp_entry_input(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  OtpInfoDto sse_decode_box_autoadd_otp_info_dto(SseDeserializer deserializer);
+
+  @protected
+  PasswordEntryInput sse_decode_box_autoadd_password_entry_input(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PasswordPolicyDto sse_decode_box_autoadd_password_policy_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BridgeError sse_decode_bridge_error(SseDeserializer deserializer);
+
+  @protected
+  EntryDetail sse_decode_entry_detail(SseDeserializer deserializer);
+
+  @protected
+  EntryDto sse_decode_entry_dto(SseDeserializer deserializer);
+
+  @protected
+  ErrorKind sse_decode_error_kind(SseDeserializer deserializer);
+
+  @protected
+  FieldDto sse_decode_field_dto(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
+
+  @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<EntryDto> sse_decode_list_entry_dto(SseDeserializer deserializer);
+
+  @protected
+  List<FieldDto> sse_decode_list_field_dto(SseDeserializer deserializer);
+
+  @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  OtpInfoDto? sse_decode_opt_box_autoadd_otp_info_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  OtpEntryInput sse_decode_otp_entry_input(SseDeserializer deserializer);
+
+  @protected
+  OtpInfoDto sse_decode_otp_info_dto(SseDeserializer deserializer);
+
+  @protected
+  PasswordEntryInput sse_decode_password_entry_input(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PasswordPolicyDto sse_decode_password_policy_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer);
+
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_8(SseDeserializer deserializer);
@@ -47,13 +209,70 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
-
-  @protected
-  bool sse_decode_bool(SseDeserializer deserializer);
+  BigInt sse_decode_usize(SseDeserializer deserializer);
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_otp_entry_input(
+    OtpEntryInput self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_otp_info_dto(
+    OtpInfoDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_password_entry_input(
+    PasswordEntryInput self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_password_policy_dto(
+    PasswordPolicyDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bridge_error(BridgeError self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_entry_detail(EntryDetail self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_entry_dto(EntryDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_error_kind(ErrorKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_field_dto(FieldDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_entry_dto(List<EntryDto> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_field_dto(List<FieldDto> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_strict(
@@ -62,16 +281,46 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_otp_info_dto(
+    OtpInfoDto? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_otp_entry_input(OtpEntryInput self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_otp_info_dto(OtpInfoDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_password_entry_input(
+    PasswordEntryInput self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_password_policy_dto(
+    PasswordPolicyDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer);
+
+  @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
 
   @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_bool(bool self, SseSerializer serializer);
+  void sse_encode_usize(BigInt self, SseSerializer serializer);
 }
 
 // Section: wire_class

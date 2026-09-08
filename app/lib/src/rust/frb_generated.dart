@@ -3,8 +3,11 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/dto.dart';
 import 'api/engine.dart';
+import 'api/error.dart';
 import 'api/simple.dart';
+import 'api/vault.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -70,7 +73,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -65670555;
+  int get rustContentHash => 1939976348;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -82,11 +85,85 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Future<String> crateApiVaultAddOtpEntry({required OtpEntryInput input});
+
+  Future<String> crateApiVaultAddPasswordEntry({
+    required PasswordEntryInput input,
+  });
+
+  Future<void> crateApiVaultChangeMasterPassword({
+    required List<int> newPassword,
+  });
+
+  Future<void> crateApiVaultCreateVault({
+    required String path,
+    required String name,
+    required List<int> password,
+  });
+
+  Future<BigInt> crateApiVaultDeleteEntries({required List<String> uuidHexes});
+
   String crateApiEngineEngineVersion();
+
+  Future<EntryDetail> crateApiVaultEntryDetail({required String uuidHex});
+
+  Future<Uint8List> crateApiVaultExportAegis();
+
+  Future<String> crateApiVaultExportOtpauthText();
+
+  String crateApiVaultGeneratePassword({
+    required int len,
+    required PasswordPolicyDto policy,
+  });
 
   String crateApiSimpleGreet({required String name});
 
+  Future<List<EntryDto>> crateApiVaultImportFromBytes({
+    required List<int> bytes,
+  });
+
+  Future<List<EntryDto>> crateApiVaultImportFromOtpauthText({
+    required String text,
+  });
+
   Future<void> crateApiSimpleInitApp();
+
+  bool crateApiVaultIsDirty();
+
+  bool crateApiVaultIsUnlocked();
+
+  Future<List<EntryDto>> crateApiVaultListEntries();
+
+  Future<void> crateApiVaultLockVault();
+
+  Future<List<EntryDto>> crateApiVaultOpenVault({
+    required String path,
+    required List<int> password,
+  });
+
+  String? crateApiVaultOtpCode({
+    required String uuidHex,
+    required BigInt timeSecs,
+  });
+
+  Future<OtpInfoDto?> crateApiVaultOtpInfo({required String uuidHex});
+
+  Future<String> crateApiVaultRevealField({
+    required String uuidHex,
+    required String key,
+  });
+
+  Future<bool> crateApiVaultSaveSession();
+
+  Future<void> crateApiVaultUpdateOtpEntry({
+    required String uuidHex,
+    required OtpEntryInput input,
+  });
+
+  Future<void> crateApiVaultUpdatePasswordEntry({
+    required String uuidHex,
+    required PasswordEntryInput input,
+  });
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -98,12 +175,167 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
+  Future<String> crateApiVaultAddOtpEntry({required OtpEntryInput input}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_otp_entry_input(input, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultAddOtpEntryConstMeta,
+        argValues: [input],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultAddOtpEntryConstMeta =>
+      const TaskConstMeta(debugName: "add_otp_entry", argNames: ["input"]);
+
+  @override
+  Future<String> crateApiVaultAddPasswordEntry({
+    required PasswordEntryInput input,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_password_entry_input(input, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 2,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultAddPasswordEntryConstMeta,
+        argValues: [input],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultAddPasswordEntryConstMeta =>
+      const TaskConstMeta(debugName: "add_password_entry", argNames: ["input"]);
+
+  @override
+  Future<void> crateApiVaultChangeMasterPassword({
+    required List<int> newPassword,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(newPassword, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultChangeMasterPasswordConstMeta,
+        argValues: [newPassword],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultChangeMasterPasswordConstMeta =>
+      const TaskConstMeta(
+        debugName: "change_master_password",
+        argNames: ["newPassword"],
+      );
+
+  @override
+  Future<void> crateApiVaultCreateVault({
+    required String path,
+    required String name,
+    required List<int> password,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          sse_encode_String(name, serializer);
+          sse_encode_list_prim_u_8_loose(password, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 4,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultCreateVaultConstMeta,
+        argValues: [path, name, password],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultCreateVaultConstMeta => const TaskConstMeta(
+    debugName: "create_vault",
+    argNames: ["path", "name", "password"],
+  );
+
+  @override
+  Future<BigInt> crateApiVaultDeleteEntries({required List<String> uuidHexes}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_String(uuidHexes, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_usize,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultDeleteEntriesConstMeta,
+        argValues: [uuidHexes],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultDeleteEntriesConstMeta =>
+      const TaskConstMeta(debugName: "delete_entries", argNames: ["uuidHexes"]);
+
+  @override
   String crateApiEngineEngineVersion() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 1)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -120,13 +352,125 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "engine_version", argNames: []);
 
   @override
+  Future<EntryDetail> crateApiVaultEntryDetail({required String uuidHex}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(uuidHex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_entry_detail,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultEntryDetailConstMeta,
+        argValues: [uuidHex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultEntryDetailConstMeta =>
+      const TaskConstMeta(debugName: "entry_detail", argNames: ["uuidHex"]);
+
+  @override
+  Future<Uint8List> crateApiVaultExportAegis() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 8,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_prim_u_8_strict,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultExportAegisConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultExportAegisConstMeta =>
+      const TaskConstMeta(debugName: "export_aegis", argNames: []);
+
+  @override
+  Future<String> crateApiVaultExportOtpauthText() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 9,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultExportOtpauthTextConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultExportOtpauthTextConstMeta =>
+      const TaskConstMeta(debugName: "export_otpauth_text", argNames: []);
+
+  @override
+  String crateApiVaultGeneratePassword({
+    required int len,
+    required PasswordPolicyDto policy,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_u_32(len, serializer);
+          sse_encode_box_autoadd_password_policy_dto(policy, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultGeneratePasswordConstMeta,
+        argValues: [len, policy],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultGeneratePasswordConstMeta =>
+      const TaskConstMeta(
+        debugName: "generate_password",
+        argNames: ["len", "policy"],
+      );
+
+  @override
   String crateApiSimpleGreet({required String name}) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(name, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -143,6 +487,69 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "greet", argNames: ["name"]);
 
   @override
+  Future<List<EntryDto>> crateApiVaultImportFromBytes({
+    required List<int> bytes,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(bytes, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 12,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_entry_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultImportFromBytesConstMeta,
+        argValues: [bytes],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultImportFromBytesConstMeta =>
+      const TaskConstMeta(debugName: "import_from_bytes", argNames: ["bytes"]);
+
+  @override
+  Future<List<EntryDto>> crateApiVaultImportFromOtpauthText({
+    required String text,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(text, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 13,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_entry_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultImportFromOtpauthTextConstMeta,
+        argValues: [text],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultImportFromOtpauthTextConstMeta =>
+      const TaskConstMeta(
+        debugName: "import_from_otpauth_text",
+        argNames: ["text"],
+      );
+
+  @override
   Future<void> crateApiSimpleInitApp() {
     return handler.executeNormal(
       NormalTask(
@@ -151,7 +558,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 14,
             port: port_,
           );
         },
@@ -169,6 +576,326 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiSimpleInitAppConstMeta =>
       const TaskConstMeta(debugName: "init_app", argNames: []);
 
+  @override
+  bool crateApiVaultIsDirty() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultIsDirtyConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultIsDirtyConstMeta =>
+      const TaskConstMeta(debugName: "is_dirty", argNames: []);
+
+  @override
+  bool crateApiVaultIsUnlocked() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiVaultIsUnlockedConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultIsUnlockedConstMeta =>
+      const TaskConstMeta(debugName: "is_unlocked", argNames: []);
+
+  @override
+  Future<List<EntryDto>> crateApiVaultListEntries() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 17,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_entry_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultListEntriesConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultListEntriesConstMeta =>
+      const TaskConstMeta(debugName: "list_entries", argNames: []);
+
+  @override
+  Future<void> crateApiVaultLockVault() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 18,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultLockVaultConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultLockVaultConstMeta =>
+      const TaskConstMeta(debugName: "lock_vault", argNames: []);
+
+  @override
+  Future<List<EntryDto>> crateApiVaultOpenVault({
+    required String path,
+    required List<int> password,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          sse_encode_list_prim_u_8_loose(password, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 19,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_entry_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultOpenVaultConstMeta,
+        argValues: [path, password],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultOpenVaultConstMeta => const TaskConstMeta(
+    debugName: "open_vault",
+    argNames: ["path", "password"],
+  );
+
+  @override
+  String? crateApiVaultOtpCode({
+    required String uuidHex,
+    required BigInt timeSecs,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(uuidHex, serializer);
+          sse_encode_u_64(timeSecs, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_String,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultOtpCodeConstMeta,
+        argValues: [uuidHex, timeSecs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultOtpCodeConstMeta => const TaskConstMeta(
+    debugName: "otp_code",
+    argNames: ["uuidHex", "timeSecs"],
+  );
+
+  @override
+  Future<OtpInfoDto?> crateApiVaultOtpInfo({required String uuidHex}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(uuidHex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 21,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_otp_info_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultOtpInfoConstMeta,
+        argValues: [uuidHex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultOtpInfoConstMeta =>
+      const TaskConstMeta(debugName: "otp_info", argNames: ["uuidHex"]);
+
+  @override
+  Future<String> crateApiVaultRevealField({
+    required String uuidHex,
+    required String key,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(uuidHex, serializer);
+          sse_encode_String(key, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 22,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultRevealFieldConstMeta,
+        argValues: [uuidHex, key],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultRevealFieldConstMeta => const TaskConstMeta(
+    debugName: "reveal_field",
+    argNames: ["uuidHex", "key"],
+  );
+
+  @override
+  Future<bool> crateApiVaultSaveSession() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 23,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultSaveSessionConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultSaveSessionConstMeta =>
+      const TaskConstMeta(debugName: "save_session", argNames: []);
+
+  @override
+  Future<void> crateApiVaultUpdateOtpEntry({
+    required String uuidHex,
+    required OtpEntryInput input,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(uuidHex, serializer);
+          sse_encode_box_autoadd_otp_entry_input(input, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 24,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultUpdateOtpEntryConstMeta,
+        argValues: [uuidHex, input],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultUpdateOtpEntryConstMeta =>
+      const TaskConstMeta(
+        debugName: "update_otp_entry",
+        argNames: ["uuidHex", "input"],
+      );
+
+  @override
+  Future<void> crateApiVaultUpdatePasswordEntry({
+    required String uuidHex,
+    required PasswordEntryInput input,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(uuidHex, serializer);
+          sse_encode_box_autoadd_password_entry_input(input, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 25,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiVaultUpdatePasswordEntryConstMeta,
+        argValues: [uuidHex, input],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVaultUpdatePasswordEntryConstMeta =>
+      const TaskConstMeta(
+        debugName: "update_password_entry",
+        argNames: ["uuidHex", "input"],
+      );
+
   @protected
   String dco_decode_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -176,9 +903,232 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  bool dco_decode_bool(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as bool;
+  }
+
+  @protected
+  OtpEntryInput dco_decode_box_autoadd_otp_entry_input(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_otp_entry_input(raw);
+  }
+
+  @protected
+  OtpInfoDto dco_decode_box_autoadd_otp_info_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_otp_info_dto(raw);
+  }
+
+  @protected
+  PasswordEntryInput dco_decode_box_autoadd_password_entry_input(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_password_entry_input(raw);
+  }
+
+  @protected
+  PasswordPolicyDto dco_decode_box_autoadd_password_policy_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_password_policy_dto(raw);
+  }
+
+  @protected
+  BridgeError dco_decode_bridge_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return BridgeError(
+      kind: dco_decode_error_kind(arr[0]),
+      message: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  EntryDetail dco_decode_entry_detail(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return EntryDetail(
+      uuid: dco_decode_String(arr[0]),
+      iconId: dco_decode_u_32(arr[1]),
+      creation: dco_decode_i_64(arr[2]),
+      lastModification: dco_decode_i_64(arr[3]),
+      fields: dco_decode_list_field_dto(arr[4]),
+    );
+  }
+
+  @protected
+  EntryDto dco_decode_entry_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return EntryDto(
+      uuid: dco_decode_String(arr[0]),
+      iconId: dco_decode_u_32(arr[1]),
+      title: dco_decode_String(arr[2]),
+      username: dco_decode_String(arr[3]),
+      url: dco_decode_String(arr[4]),
+      notes: dco_decode_String(arr[5]),
+      hasOtp: dco_decode_bool(arr[6]),
+      creation: dco_decode_i_64(arr[7]),
+      lastModification: dco_decode_i_64(arr[8]),
+    );
+  }
+
+  @protected
+  ErrorKind dco_decode_error_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ErrorKind.values[raw as int];
+  }
+
+  @protected
+  FieldDto dco_decode_field_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return FieldDto(
+      key: dco_decode_String(arr[0]),
+      value: dco_decode_String(arr[1]),
+      protected: dco_decode_bool(arr[2]),
+    );
+  }
+
+  @protected
+  int dco_decode_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeI64(raw);
+  }
+
+  @protected
+  List<String> dco_decode_list_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<EntryDto> dco_decode_list_entry_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_entry_dto).toList();
+  }
+
+  @protected
+  List<FieldDto> dco_decode_list_field_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_field_dto).toList();
+  }
+
+  @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as List<int>;
+  }
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
+  }
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
+  OtpInfoDto? dco_decode_opt_box_autoadd_otp_info_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_otp_info_dto(raw);
+  }
+
+  @protected
+  OtpEntryInput dco_decode_otp_entry_input(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return OtpEntryInput(
+      issuer: dco_decode_String(arr[0]),
+      account: dco_decode_String(arr[1]),
+      secretOrUri: dco_decode_String(arr[2]),
+      kind: dco_decode_String(arr[3]),
+      algorithm: dco_decode_String(arr[4]),
+      digits: dco_decode_u_32(arr[5]),
+      period: dco_decode_u_64(arr[6]),
+      counter: dco_decode_u_64(arr[7]),
+      pin: dco_decode_String(arr[8]),
+    );
+  }
+
+  @protected
+  OtpInfoDto dco_decode_otp_info_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return OtpInfoDto(
+      kind: dco_decode_String(arr[0]),
+      issuer: dco_decode_String(arr[1]),
+      account: dco_decode_String(arr[2]),
+      algorithm: dco_decode_String(arr[3]),
+      digits: dco_decode_u_32(arr[4]),
+      period: dco_decode_u_64(arr[5]),
+      counter: dco_decode_u_64(arr[6]),
+      hasPin: dco_decode_bool(arr[7]),
+    );
+  }
+
+  @protected
+  PasswordEntryInput dco_decode_password_entry_input(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return PasswordEntryInput(
+      title: dco_decode_String(arr[0]),
+      username: dco_decode_String(arr[1]),
+      password: dco_decode_String(arr[2]),
+      url: dco_decode_String(arr[3]),
+      notes: dco_decode_String(arr[4]),
+    );
+  }
+
+  @protected
+  PasswordPolicyDto dco_decode_password_policy_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return PasswordPolicyDto(
+      upper: dco_decode_bool(arr[0]),
+      lower: dco_decode_bool(arr[1]),
+      digits: dco_decode_bool(arr[2]),
+      symbols: dco_decode_bool(arr[3]),
+      excludeAmbiguous: dco_decode_bool(arr[4]),
+      requireEachSet: dco_decode_bool(arr[5]),
+    );
+  }
+
+  @protected
+  int dco_decode_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  BigInt dco_decode_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
   }
 
   @protected
@@ -194,6 +1144,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BigInt dco_decode_usize(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_list_prim_u_8_strict(deserializer);
@@ -201,10 +1157,291 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  bool sse_decode_bool(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  OtpEntryInput sse_decode_box_autoadd_otp_entry_input(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_otp_entry_input(deserializer));
+  }
+
+  @protected
+  OtpInfoDto sse_decode_box_autoadd_otp_info_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_otp_info_dto(deserializer));
+  }
+
+  @protected
+  PasswordEntryInput sse_decode_box_autoadd_password_entry_input(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_password_entry_input(deserializer));
+  }
+
+  @protected
+  PasswordPolicyDto sse_decode_box_autoadd_password_policy_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_password_policy_dto(deserializer));
+  }
+
+  @protected
+  BridgeError sse_decode_bridge_error(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_error_kind(deserializer);
+    var var_message = sse_decode_String(deserializer);
+    return BridgeError(kind: var_kind, message: var_message);
+  }
+
+  @protected
+  EntryDetail sse_decode_entry_detail(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_uuid = sse_decode_String(deserializer);
+    var var_iconId = sse_decode_u_32(deserializer);
+    var var_creation = sse_decode_i_64(deserializer);
+    var var_lastModification = sse_decode_i_64(deserializer);
+    var var_fields = sse_decode_list_field_dto(deserializer);
+    return EntryDetail(
+      uuid: var_uuid,
+      iconId: var_iconId,
+      creation: var_creation,
+      lastModification: var_lastModification,
+      fields: var_fields,
+    );
+  }
+
+  @protected
+  EntryDto sse_decode_entry_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_uuid = sse_decode_String(deserializer);
+    var var_iconId = sse_decode_u_32(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_username = sse_decode_String(deserializer);
+    var var_url = sse_decode_String(deserializer);
+    var var_notes = sse_decode_String(deserializer);
+    var var_hasOtp = sse_decode_bool(deserializer);
+    var var_creation = sse_decode_i_64(deserializer);
+    var var_lastModification = sse_decode_i_64(deserializer);
+    return EntryDto(
+      uuid: var_uuid,
+      iconId: var_iconId,
+      title: var_title,
+      username: var_username,
+      url: var_url,
+      notes: var_notes,
+      hasOtp: var_hasOtp,
+      creation: var_creation,
+      lastModification: var_lastModification,
+    );
+  }
+
+  @protected
+  ErrorKind sse_decode_error_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return ErrorKind.values[inner];
+  }
+
+  @protected
+  FieldDto sse_decode_field_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_key = sse_decode_String(deserializer);
+    var var_value = sse_decode_String(deserializer);
+    var var_protected = sse_decode_bool(deserializer);
+    return FieldDto(key: var_key, value: var_value, protected: var_protected);
+  }
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getInt32();
+  }
+
+  @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getPlatformInt64();
+  }
+
+  @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <String>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<EntryDto> sse_decode_list_entry_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <EntryDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_entry_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<FieldDto> sse_decode_list_field_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <FieldDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_field_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_String(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  OtpInfoDto? sse_decode_opt_box_autoadd_otp_info_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_otp_info_dto(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  OtpEntryInput sse_decode_otp_entry_input(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_issuer = sse_decode_String(deserializer);
+    var var_account = sse_decode_String(deserializer);
+    var var_secretOrUri = sse_decode_String(deserializer);
+    var var_kind = sse_decode_String(deserializer);
+    var var_algorithm = sse_decode_String(deserializer);
+    var var_digits = sse_decode_u_32(deserializer);
+    var var_period = sse_decode_u_64(deserializer);
+    var var_counter = sse_decode_u_64(deserializer);
+    var var_pin = sse_decode_String(deserializer);
+    return OtpEntryInput(
+      issuer: var_issuer,
+      account: var_account,
+      secretOrUri: var_secretOrUri,
+      kind: var_kind,
+      algorithm: var_algorithm,
+      digits: var_digits,
+      period: var_period,
+      counter: var_counter,
+      pin: var_pin,
+    );
+  }
+
+  @protected
+  OtpInfoDto sse_decode_otp_info_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_String(deserializer);
+    var var_issuer = sse_decode_String(deserializer);
+    var var_account = sse_decode_String(deserializer);
+    var var_algorithm = sse_decode_String(deserializer);
+    var var_digits = sse_decode_u_32(deserializer);
+    var var_period = sse_decode_u_64(deserializer);
+    var var_counter = sse_decode_u_64(deserializer);
+    var var_hasPin = sse_decode_bool(deserializer);
+    return OtpInfoDto(
+      kind: var_kind,
+      issuer: var_issuer,
+      account: var_account,
+      algorithm: var_algorithm,
+      digits: var_digits,
+      period: var_period,
+      counter: var_counter,
+      hasPin: var_hasPin,
+    );
+  }
+
+  @protected
+  PasswordEntryInput sse_decode_password_entry_input(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_title = sse_decode_String(deserializer);
+    var var_username = sse_decode_String(deserializer);
+    var var_password = sse_decode_String(deserializer);
+    var var_url = sse_decode_String(deserializer);
+    var var_notes = sse_decode_String(deserializer);
+    return PasswordEntryInput(
+      title: var_title,
+      username: var_username,
+      password: var_password,
+      url: var_url,
+      notes: var_notes,
+    );
+  }
+
+  @protected
+  PasswordPolicyDto sse_decode_password_policy_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_upper = sse_decode_bool(deserializer);
+    var var_lower = sse_decode_bool(deserializer);
+    var var_digits = sse_decode_bool(deserializer);
+    var var_symbols = sse_decode_bool(deserializer);
+    var var_excludeAmbiguous = sse_decode_bool(deserializer);
+    var var_requireEachSet = sse_decode_bool(deserializer);
+    return PasswordPolicyDto(
+      upper: var_upper,
+      lower: var_lower,
+      digits: var_digits,
+      symbols: var_symbols,
+      excludeAmbiguous: var_excludeAmbiguous,
+      requireEachSet: var_requireEachSet,
+    );
+  }
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint32();
+  }
+
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
   }
 
   @protected
@@ -219,21 +1456,159 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer) {
+  BigInt sse_decode_usize(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getInt32();
-  }
-
-  @protected
-  bool sse_decode_bool(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getUint8() != 0;
+    return deserializer.buffer.getBigUint64();
   }
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
+  }
+
+  @protected
+  void sse_encode_bool(bool self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint8(self ? 1 : 0);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_otp_entry_input(
+    OtpEntryInput self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_otp_entry_input(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_otp_info_dto(
+    OtpInfoDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_otp_info_dto(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_password_entry_input(
+    PasswordEntryInput self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_password_entry_input(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_password_policy_dto(
+    PasswordPolicyDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_password_policy_dto(self, serializer);
+  }
+
+  @protected
+  void sse_encode_bridge_error(BridgeError self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_error_kind(self.kind, serializer);
+    sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void sse_encode_entry_detail(EntryDetail self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.uuid, serializer);
+    sse_encode_u_32(self.iconId, serializer);
+    sse_encode_i_64(self.creation, serializer);
+    sse_encode_i_64(self.lastModification, serializer);
+    sse_encode_list_field_dto(self.fields, serializer);
+  }
+
+  @protected
+  void sse_encode_entry_dto(EntryDto self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.uuid, serializer);
+    sse_encode_u_32(self.iconId, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_String(self.username, serializer);
+    sse_encode_String(self.url, serializer);
+    sse_encode_String(self.notes, serializer);
+    sse_encode_bool(self.hasOtp, serializer);
+    sse_encode_i_64(self.creation, serializer);
+    sse_encode_i_64(self.lastModification, serializer);
+  }
+
+  @protected
+  void sse_encode_error_kind(ErrorKind self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_field_dto(FieldDto self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.key, serializer);
+    sse_encode_String(self.value, serializer);
+    sse_encode_bool(self.protected, serializer);
+  }
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putInt32(self);
+  }
+
+  @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putPlatformInt64(self);
+  }
+
+  @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_entry_dto(
+    List<EntryDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_entry_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_field_dto(
+    List<FieldDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_field_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_prim_u_8_loose(
+    List<int> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putUint8List(
+      self is Uint8List ? self : Uint8List.fromList(self),
+    );
   }
 
   @protected
@@ -244,6 +1619,98 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_String(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_otp_info_dto(
+    OtpInfoDto? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_otp_info_dto(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_otp_entry_input(
+    OtpEntryInput self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.issuer, serializer);
+    sse_encode_String(self.account, serializer);
+    sse_encode_String(self.secretOrUri, serializer);
+    sse_encode_String(self.kind, serializer);
+    sse_encode_String(self.algorithm, serializer);
+    sse_encode_u_32(self.digits, serializer);
+    sse_encode_u_64(self.period, serializer);
+    sse_encode_u_64(self.counter, serializer);
+    sse_encode_String(self.pin, serializer);
+  }
+
+  @protected
+  void sse_encode_otp_info_dto(OtpInfoDto self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.kind, serializer);
+    sse_encode_String(self.issuer, serializer);
+    sse_encode_String(self.account, serializer);
+    sse_encode_String(self.algorithm, serializer);
+    sse_encode_u_32(self.digits, serializer);
+    sse_encode_u_64(self.period, serializer);
+    sse_encode_u_64(self.counter, serializer);
+    sse_encode_bool(self.hasPin, serializer);
+  }
+
+  @protected
+  void sse_encode_password_entry_input(
+    PasswordEntryInput self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.title, serializer);
+    sse_encode_String(self.username, serializer);
+    sse_encode_String(self.password, serializer);
+    sse_encode_String(self.url, serializer);
+    sse_encode_String(self.notes, serializer);
+  }
+
+  @protected
+  void sse_encode_password_policy_dto(
+    PasswordPolicyDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.upper, serializer);
+    sse_encode_bool(self.lower, serializer);
+    sse_encode_bool(self.digits, serializer);
+    sse_encode_bool(self.symbols, serializer);
+    sse_encode_bool(self.excludeAmbiguous, serializer);
+    sse_encode_bool(self.requireEachSet, serializer);
+  }
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint32(self);
+  }
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
   }
 
   @protected
@@ -258,14 +1725,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_i_32(int self, SseSerializer serializer) {
+  void sse_encode_usize(BigInt self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putInt32(self);
-  }
-
-  @protected
-  void sse_encode_bool(bool self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putUint8(self ? 1 : 0);
+    serializer.buffer.putBigUint64(self);
   }
 }

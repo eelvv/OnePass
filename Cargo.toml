@@ -7,3 +7,8 @@ edition = "2021"
 
 [profile.release]
 lto = true
+
+# Argon2 (64 MiB, 3 passes) is unusably slow in debug builds; always
+# optimize the KDF crate even for dev/test so vault round-trips stay fast.
+[profile.dev.package.argon2]
+opt-level = 3
