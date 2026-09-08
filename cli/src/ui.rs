@@ -297,7 +297,7 @@ fn confirm_popup(f: &mut Frame, app: &App) {
     f.render_widget(Clear, area);
     let text = match app.confirm {
         Some(ConfirmAction::Quit) => {
-            "Unsaved changes — save before quitting?\n\n  [y] save & quit    [n] discard    [Esc] stay"
+            "Unsaved changes — what do you want to do?\n\n  [y] save & quit    [n] discard & quit    [Esc] stay"
         }
         Some(ConfirmAction::DeleteMarked) => {
             "Delete the marked entries?\n\n  [y] delete    [n/Esc] cancel"

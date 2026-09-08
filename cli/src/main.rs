@@ -24,6 +24,14 @@ use crate::app::App;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    if args.iter().skip(1).any(|a| a == "-h" || a == "--help") {
+        print_usage();
+        return;
+    }
+    if args.iter().skip(1).any(|a| a == "-V" || a == "--version") {
+        println!("onepass-cli {}", env!("CARGO_PKG_VERSION"));
+        return;
+    }
     let file = args
         .get(1)
         .cloned()
@@ -117,6 +125,22 @@ fn fs_err(file: &str) -> Result<Vec<u8>, String> {
     std::fs::read(file).map_err(|e| format!("read {file}: {e}"))
 }
 
+fn print_usage() {
+    println!("onepass-cli — interactive TUI password manager + 2FA console");
+    println!();
+    println!("Usage: onepass-cli [vault.kdbx]");
+    println!();
+    println!("Arguments:");
+    println!("  vault.kdbx    Vault file to open or create (default: passwords.kdbx)");
+    println!();
+    println!("Options:");
+    println!("  -h, --help     Print this help");
+    println!("  -V, --version  Print version");
+    println!();
+    println!("Environment:");
+    println!("  ONEPASS_PASSWORD  Master password (non-interactive use)");
+}
+
 fn run_app(terminal: &mut DefaultTerminal, mut app: App) -> Result<(), Box<dyn std::error::Error>> {
     loop {
         terminal.draw(|f| ui::draw(f, &mut app))?;
@@ -134,8 +158,9 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App) -> Result<(), Box<dyn s
         }
     }
 
-    // Persist automatically on clean exit if there are unsaved changes.
-    if app.dirty {
+    // Persist automatically on clean exit if there are unsaved changes and
+    // the user did not choose to discard them.
+    if app.dirty && !app.discard_on_quit {
         match save(&app.vault, app.password.as_bytes()) {
             Ok(bytes) => {
                 std::fs::write(&app.file, bytes)?;

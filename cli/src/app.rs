@@ -154,6 +154,9 @@ pub struct App {
     pub confirm: Option<ConfirmAction>,
     pub form: AddForm,
     pub help_scroll: u16,
+    /// Set when the user chose to discard unsaved changes on quit; the runner
+    /// checks this to skip the auto-save on exit.
+    pub discard_on_quit: bool,
 }
 
 /// Seconds a reveal stays on before auto-hiding.
@@ -181,6 +184,7 @@ impl App {
             confirm: None,
             form: AddForm::default(),
             help_scroll: 0,
+            discard_on_quit: false,
         }
     }
 
@@ -558,6 +562,15 @@ impl App {
                 self.mode = Mode::Normal;
                 if let Some(action) = action {
                     self.run_confirm(action);
+                }
+            }
+            KeyCode::Char('n') | KeyCode::Char('N') => {
+                let action = self.confirm.take();
+                self.mode = Mode::Normal;
+                if action == Some(ConfirmAction::Quit) {
+                    // Quit without saving; skip the runner's auto-save.
+                    self.discard_on_quit = true;
+                    self.quit = true;
                 }
             }
             _ => {
