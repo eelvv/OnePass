@@ -15,16 +15,21 @@ use crate::db::{
 };
 use crate::error::{Error, Result};
 use crate::kdf::{transform_aes_kdf, transform_argon2, Argon2Kind};
+use zeroize::Zeroizing;
 
 /// Opens (decrypts and parses) a KDBX file with the given password.
+///
+/// Intermediate key material is zeroized when the call returns.
 pub fn open(data: &[u8], password: &[u8]) -> Result<Vault> {
-    let (header, header_len) = KdbxHeader::parse(data)?;
+    let (header, header_len) = KdbxHeader::parse(data).map_err(|e| Error::Format(e.to_string()))?;
     let header_bytes = &data[..header_len];
 
-    let composite = keys::composite_key(&[&keys::password_key(password)]);
-    let transformed = transform(&header, &composite)?;
-    let final_key = keys::final_key(&header.master_seed, &transformed);
-    let hmac_key = keys::hmac_key(&header.master_seed, &transformed);
+    let composite = Zeroizing::new(keys::composite_key(&[&*Zeroizing::new(
+        keys::password_key(password),
+    )]));
+    let transformed = Zeroizing::new(transform(&header, &composite)?);
+    let final_key = Zeroizing::new(keys::final_key(&header.master_seed, &transformed));
+    let hmac_key = Zeroizing::new(keys::hmac_key(&header.master_seed, &transformed));
 
     let ciphertext = if header.version >= VERSION_40 {
         verify_header_auth(data, header_len, header_bytes, &hmac_key)?;
@@ -35,14 +40,27 @@ pub fn open(data: &[u8], password: &[u8]) -> Result<Vault> {
 
     let compressed = header
         .cipher
-        .decrypt(&final_key, &header.encryption_iv, &ciphertext)?;
+        .decrypt(&final_key[..], &header.encryption_iv, &ciphertext)
+        .map_err(|_| {
+            // KDBX 4 authenticated the ciphertext with per-block HMACs, so a
+            // decrypt failure here means the file is corrupted. KDBX 3 has no
+            // block auth; a padding failure is the wrong-password signal.
+            if header.version >= VERSION_40 {
+                Error::Format("payload decrypt failed".to_string())
+            } else {
+                Error::WrongPassword
+            }
+        })?;
     let payload = match header.compression {
-        Compression::Gzip => gzip_decompress(&compressed)?,
+        Compression::Gzip => {
+            gzip_decompress(&compressed).map_err(|e| Error::Format(e.to_string()))?
+        }
         Compression::None => compressed,
     };
 
     let (xml_bytes, mut stream) = if header.version >= VERSION_40 {
-        let (inner, xml_offset) = InnerHeader::parse(&payload)?;
+        let (inner, xml_offset) =
+            InnerHeader::parse(&payload).map_err(|e| Error::Format(e.to_string()))?;
         let kind = match inner.inner_random_stream_id {
             2 => ProtectedStreamKind::Salsa20,
             _ => ProtectedStreamKind::ChaCha20,
@@ -59,13 +77,50 @@ pub fn open(data: &[u8], password: &[u8]) -> Result<Vault> {
         (&payload[..], stream)
     };
 
-    xml::parse(xml_bytes, &mut stream)
+    xml::parse(xml_bytes, &mut stream).map_err(|e| Error::Format(e.to_string()))
+}
+
+/// Tunables for [`save_with`]. Random salts, seeds, and IVs are always
+/// generated fresh; these knobs only pin the KDF work factors.
+#[derive(Debug, Clone, Copy)]
+pub struct SaveOptions {
+    /// Argon2 memory cost in bytes (default 64 MiB).
+    pub argon2_memory: u64,
+    /// Argon2 passes (default 3).
+    pub argon2_iterations: u64,
+    /// Argon2 lanes (default 2).
+    pub argon2_parallelism: u32,
+}
+
+impl Default for SaveOptions {
+    fn default() -> Self {
+        Self {
+            argon2_memory: 64 * 1024 * 1024,
+            argon2_iterations: 3,
+            argon2_parallelism: 2,
+        }
+    }
+}
+
+impl SaveOptions {
+    /// Lower memory cost tuned for mobile unlock latency (~32 MiB).
+    pub fn mobile() -> Self {
+        Self {
+            argon2_memory: 32 * 1024 * 1024,
+            ..Default::default()
+        }
+    }
 }
 
 /// Saves a [`Vault`] as an encrypted KDBX 4 file with the given password.
 ///
 /// Uses Argon2d KDF, AES-256-CBC, GZip, and a ChaCha20 inner random stream.
 pub fn save(vault: &Vault, password: &[u8]) -> Result<Vec<u8>> {
+    save_with(vault, password, &SaveOptions::default())
+}
+
+/// [`save`] with explicit KDF work-factor options.
+pub fn save_with(vault: &Vault, password: &[u8], options: &SaveOptions) -> Result<Vec<u8>> {
     // --- generate random parameters --------------------------------------
     let master_seed = random_bytes(32)?;
     let iv = random_bytes(16)?;
@@ -75,9 +130,9 @@ pub fn save(vault: &Vault, password: &[u8]) -> Result<Vec<u8>> {
     let kdf = KdfParams::Argon2 {
         id: Argon2Variant::Argon2d,
         salt: to32(salt)?,
-        parallelism: 2,
-        memory: 64 * 1024 * 1024,
-        iterations: 3,
+        parallelism: options.argon2_parallelism,
+        memory: options.argon2_memory,
+        iterations: options.argon2_iterations,
         version: 0x13,
     };
 
@@ -111,14 +166,16 @@ pub fn save(vault: &Vault, password: &[u8]) -> Result<Vec<u8>> {
     // --- compress + encrypt + HMAC blocks ---------------------------------
     let compressed = gzip_compress(&payload)?;
 
-    let composite = keys::composite_key(&[&keys::password_key(password)]);
-    let transformed = transform(&header, &composite)?;
-    let final_key = keys::final_key(&header.master_seed, &transformed);
-    let hmac_key = keys::hmac_key(&header.master_seed, &transformed);
+    let composite = Zeroizing::new(keys::composite_key(&[&*Zeroizing::new(
+        keys::password_key(password),
+    )]));
+    let transformed = Zeroizing::new(transform(&header, &composite)?);
+    let final_key = Zeroizing::new(keys::final_key(&header.master_seed, &transformed));
+    let hmac_key = Zeroizing::new(keys::hmac_key(&header.master_seed, &transformed));
 
     let ciphertext = header
         .cipher
-        .encrypt(&final_key, &header.encryption_iv, &compressed)?;
+        .encrypt(&final_key[..], &header.encryption_iv, &compressed)?;
     let blocks = hmac_block::encode(&ciphertext, &hmac_key, 1024 * 1024);
 
     // --- assemble: header || header_hash || header_hmac || blocks ---------
@@ -196,11 +253,13 @@ fn verify_header_auth(
 
     let computed_hash = Sha256::digest(header_bytes);
     if computed_hash.as_slice() != stored_hash {
-        return Err(Error::Encoding("header sha256 mismatch".to_string()));
+        return Err(Error::Format("header sha256 mismatch".to_string()));
     }
 
     if compute_header_hmac(header_bytes, hmac_key) != stored_hmac {
-        return Err(Error::Encoding("header hmac mismatch".to_string()));
+        // The HMAC key derives from the transformed composite key, so a
+        // mismatch means the password does not match this vault.
+        return Err(Error::WrongPassword);
     }
     Ok(())
 }

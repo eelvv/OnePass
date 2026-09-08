@@ -60,9 +60,9 @@ pub fn decode(data: &[u8], hmac_key: &[u8; 64]) -> Result<Vec<u8>> {
         mac.update(block);
         let computed = mac.finalize().into_bytes();
         if computed.as_slice() != stored {
-            return Err(Error::Encoding(
-                "HMAC block verification failed".to_string(),
-            ));
+            // The block key derives from the master key; a verification
+            // failure means the password/key does not match the data.
+            return Err(Error::WrongPassword);
         }
 
         index += 1;
@@ -93,7 +93,7 @@ fn read_u32(data: &[u8], pos: &mut usize) -> Result<u32> {
 
 fn read_bytes<'a>(data: &'a [u8], pos: &mut usize, len: usize) -> Result<&'a [u8]> {
     if *pos + len > data.len() {
-        return Err(Error::Encoding("truncated hmac block stream".to_string()));
+        return Err(Error::Format("truncated hmac block stream".to_string()));
     }
     let s = &data[*pos..*pos + len];
     *pos += len;
