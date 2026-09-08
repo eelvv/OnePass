@@ -55,30 +55,24 @@ cargo clippy --workspace
 cargo fmt --all
 ```
 
-## Releases & versioning
+## Releases & downloads
 
-Each component carries its own semver (`onepass-cli` 0.1.3, `onepass-engine`
-0.1.1) and is released independently through component tags:
+Each component is versioned and released independently through component
+tags:
 
-| Tag | Builds | Example |
+| Tag | Builds |
+|---|---|
+| `cli-v*` | CLI binaries (`onepass-cli-<platform>.tar.gz`) |
+| `app-v*` | Android app (`onepass-app-android-arm64.apk`) |
+| `v*` | global bundle: every component in one release |
+
+| Component | Latest release | Downloads |
 |---|---|---|
-| `cli-v*` | CLI binaries only | `cli-v0.1.3` |
-| `app-v*` | Android app APK | `app-v0.1.1` |
-| `desktop-v*` | future components | — |
-| `v*` | global bundle: every component in one release | `v0.2.0` |
-
-Release together by pushing several tags at once:
-
-```bash
-git tag cli-v0.1.3 app-v0.1.0
-git push origin cli-v0.1.3 app-v0.1.0
-```
+| CLI | [![CLI](https://img.shields.io/github/v/release/eelvv/OnePass?filter=cli-v*&label=%20)](https://github.com/eelvv/OnePass/releases?q=cli-v) | [Linux / macOS / Windows](https://github.com/eelvv/OnePass/releases?q=cli-v) |
+| Android app | [![App](https://img.shields.io/github/v/release/eelvv/OnePass?filter=app-v*&label=%20)](https://github.com/eelvv/OnePass/releases?q=app-v) | [APK (arm64)](https://github.com/eelvv/OnePass/releases?q=app-v) |
 
 `onepass-engine` is a library and is never tagged on its own; the engine
-version bundled in a binary is noted in that release's notes. Binaries for
-Linux (x86_64), macOS (aarch64) and Windows (x86_64) are attached to every
-CLI/bundle release automatically; `app-v*` releases carry the Android APK
-(`onepass-app-android-arm64.apk`).
+version bundled in a binary is noted in that release's notes.
 
 ## Acknowledgements
 
