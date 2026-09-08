@@ -21,5 +21,4 @@ no GPL code is included.
 cargo test --release
 ```
 
-Local cargo mirror workaround (`engine/.cargo/config.toml`) redirects the
-`mirror` source to `rsproxy.cn`; it is gitignored and does not affect CI.
+
