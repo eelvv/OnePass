@@ -1,24 +1,33 @@
 # OnePass Engine
 
-Independent Rust core for KeePass KDBX 4 I/O, OTP algorithms (RFC 4226/6238,
-Steam, MOTP, Yandex.Key), `otpauth://` URI parsing/construction, and 2FA
-import/export (Aegis JSON / URI list / Google Authenticator migration).
+Core library behind OnePass. Handles reading and writing KeePass KDBX 4
+vaults, computing OTP codes (TOTP, HOTP, Steam, MOTP, Yandex), parsing and
+building `otpauth://` / `motp://` URIs, and importing/exporting 2FA entries
+(Aegis JSON, URI lists, Google Authenticator migration).
 
-Only public standards and publicly documented algorithms are implemented;
-no GPL code is included.
+Only public standards and documented algorithms are implemented — no GPL
+code is included.
+
+## Modules
+
+| Path | Purpose |
+|---|---|
+| `cipher/` | AES-256-CBC, Twofish-256-CBC, ChaCha20 |
+| `kdf/` | Argon2 (d/i/id) and AES-KDF key derivation |
+| `db/` | KDBX 4 header, inner header, content streams, XML model, vault I/O, OTP integration |
+| `otp/` | HOTP, TOTP, Steam, MOTP, Yandex.Key |
+| `uri/` | `otpauth://` and `motp://` parse/build |
+| `encoding/` | Base32 (RFC 4648), Hex |
 
 ## Validation
 
-- RFC 4226 Appendix D (HOTP reference vectors)
-- RFC 6238 Appendix B (TOTP reference vectors)
+- RFC 4226 Appendix D (HOTP)
+- RFC 6238 Appendix B (TOTP SHA-1/256/512)
 - RFC 4648 Section 10 (Base32)
-- Steam / MOTP / Yandex verified against independent Python reference
-  implementations
+- Real `.kdbx` round-trip (open → save → re-open)
 
 ## Build / Test
 
 ```bash
 cargo test --release
 ```
-
-

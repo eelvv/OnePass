@@ -1,8 +1,8 @@
 [package]
 name = "onepass-engine"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
-description = "OnePass core engine: OTP, otpauth URI, KDF, KDBX (independent implementation, functionally referenced from KeePassDX/Aegis)"
+description = "OnePass core library: KeePass KDBX 4, OTP, otpauth URI, and 2FA import/export"
 license = "MIT OR Apache-2.0"
 
 [dependencies]

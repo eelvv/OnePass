@@ -2,7 +2,7 @@
 name = "onepass-cli"
 version.workspace = true
 edition.workspace = true
-description = "Interactive TUI password manager + 2FA console over the OnePass engine"
+description = "OnePass interactive terminal UI: browse, edit, and generate 2FA codes"
 
 [lib]
 name = "onepass_cli"

@@ -1,39 +1,58 @@
 # OnePass
 
-Password manager + 2FA (TOTP/HOTP) built as an independent Rust core
-(`onepass-engine`) and an interactive terminal interface (`onepass-cli`).
+An offline password manager with built-in two-factor authentication (2FA)
+code generation. It reads and writes standard KeePass `.kdbx` vaults, so your
+passwords stay compatible with the wider KeePass ecosystem.
 
-## Project structure
+## Features
 
-| Path | Role | Docs |
+- KeePass KDBX 4 vaults (Argon2 / AES-KDF, AES / Twofish / ChaCha20)
+- 2FA codes: TOTP, HOTP, plus Steam, MOTP and Yandex variants, with a live countdown
+- Import / export of 2FA entries (Aegis JSON, `otpauth://` lists, Google Authenticator migration)
+- Interactive terminal UI (`onepass-cli`): browse, edit, multi-select, copy to clipboard
+
+## Documentation
+
+| Component | Description | Docs |
 |---|---|---|
-| [`engine/`](engine/) | Core library (KDBX 4, OTP, URI, import/export) | [`engine/README.md`](engine/README.md) |
-| [`cli/`](cli/) | TUI manager (`onepass-cli`) | [`cli/README.md`](cli/README.md) |
-| [`reference/`](reference/) | Upstream references (KeePassDX, Aegis); excluded from build (`.gitignore`) | — |
+| `onepass-engine` | Core library: vault format, crypto, OTP, import/export | [`engine/README.md`](engine/README.md) |
+| `onepass-cli` | Interactive terminal UI | [`cli/README.md`](cli/README.md) |
 
 ## Quick start
 
 ```bash
 cargo build --release
-./target/release/onepass-cli [vault.kdbx]
-# Generate the demo vault first (see cli/README.md for details):
-cargo run --release --example create_demo
+cargo run --release --example create_demo     # build a demo vault (password: example1)
+./target/release/onepass-cli examples/output.kdbx
+```
+
+Non-interactive use (scripts / CI) passes the master password through the
+`ONEPASS_PASSWORD` environment variable:
+
+```bash
+ONEPASS_PASSWORD=example1 ./target/release/onepass-cli examples/output.kdbx
+```
+
+## Development
+
+```bash
+cargo test --release      # reference vectors + real-file interop + round-trip
+cargo clippy --workspace
+cargo fmt --all
 ```
 
 ## CI
 
 [![Rust CI](https://github.com/eelvv/OnePass/actions/workflows/ci.yml/badge.svg)](https://github.com/eelvv/OnePass/actions/workflows/ci.yml)
 
-- `cargo fmt --all -- --check`
-- `cargo test --release`
-- `cargo clippy --workspace -D warnings`
-- Cross-platform release builds for Linux (x86_64), macOS (aarch64), Windows (x86_64) triggered on tags (`v*`, `cli-v*`).
+Release binaries for Linux (x86_64), macOS (aarch64) and Windows (x86_64) are
+built automatically on version tags (`v*` for the whole workspace, `cli-v*` for
+the CLI on its own).
 
-## References
+## Acknowledgements
 
-Only public standards and documented algorithms are implemented; no GPL code is copied.
+Standards and formats this project is based on, and the open-source projects
+consulted for behavioural reference (no code is copied):
 
-- [KeePassDX](https://github.com/Kunzisoft/KeePassDX) — KDBX 4 format reference
-- [Aegis Authenticator](https://github.com/beemdevelopment/Aegis) — Aegis JSON / `otpauth://` format reference
-- [RustCrypto formats](https://github.com/RustCrypto/formats) — cipher / encoding reference implementations (independent)
-
+- [KeePassDX](https://github.com/Kunzisoft/KeePassDX) — KDBX 4 file format
+- [Aegis Authenticator](https://github.com/beemdevelopment/Aegis) — 2FA import/export formats
