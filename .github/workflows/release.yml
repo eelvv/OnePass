@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+      - '*-v*.*.*'  # sub-crate tags: cli-v..., engine-v..., desktop-v...
 
 permissions:
   contents: write
