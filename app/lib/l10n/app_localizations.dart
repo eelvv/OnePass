@@ -637,6 +637,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Logs cleared'**
   String get logsCleared;
+
+  /// No description provided for @fieldCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Created'**
+  String get fieldCreated;
+
+  /// No description provided for @fieldModified.
+  ///
+  /// In en, this message translates to:
+  /// **'Modified'**
+  String get fieldModified;
 }
 
 class _AppLocalizationsDelegate

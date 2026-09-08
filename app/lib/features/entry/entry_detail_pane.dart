@@ -153,9 +153,13 @@ class _DetailPaneState extends ConsumerState<DetailPane> {
     final l10n = context.l10n;
     final uuid = ref.watch(selectedEntryProvider);
 
-    // Reload whenever the selection changes (desktop pane stays mounted).
+    // Reload whenever the selection changes or the list was mutated
+    // (desktop pane stays mounted across both).
     ref.listen<String?>(selectedEntryProvider, (previous, next) {
       if (previous != next) _load();
+    });
+    ref.listen(entriesProvider, (_, _) {
+      if (ref.read(selectedEntryProvider) != null) _load();
     });
 
     if (uuid == null) {
@@ -218,6 +222,18 @@ class _DetailPaneState extends ConsumerState<DetailPane> {
                 ),
                 const SizedBox(height: 16),
               ],
+              ListTile(
+                dense: true,
+                leading: const Icon(Icons.schedule_outlined, size: 18),
+                title: Text(
+                  '${l10n.fieldCreated}: '
+                  '${formatDotnetDate(context, detail.creation)} · '
+                  '${l10n.fieldModified}: '
+                  '${formatDotnetDate(context, detail.lastModification)}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              const SizedBox(height: 4),
               ...detail.fields.map(
                 (f) => _FieldTile(
                   field: f,

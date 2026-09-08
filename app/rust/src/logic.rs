@@ -109,16 +109,14 @@ pub(crate) fn core_import_vault_file(
 ) -> BridgeResult<Vec<EntryDto>> {
     let data =
         std::fs::read(path).map_err(|e| BridgeError::new(ErrorKind::Io, format!("read {path}: {e}")))?;
+    // Validate against the picked file BEFORE touching the current session:
+    // a wrong password must leave the existing vault untouched.
     let vault = onepass_engine::db::open(&data, password.as_slice())?;
     let dtos = entries_to_dtos(&vault);
 
+    // Swap sessions: the old one drops (password zeroized); the new one
+    // targets the app vault path so the next save materializes a fresh copy.
     let mut guard = lock_session();
-    if guard.is_some() {
-        return Err(BridgeError::new(
-            ErrorKind::SessionState,
-            "a vault is already open".to_string(),
-        ));
-    }
     *guard = Some(SessionState {
         vault,
         password,

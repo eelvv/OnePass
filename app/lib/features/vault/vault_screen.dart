@@ -145,6 +145,7 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
         ],
       ),
     );
+    controller.dispose();
     if (text == null || text.trim().isEmpty) return;
     try {
       final imported = await bridge.importFromOtpauthText(text: text);

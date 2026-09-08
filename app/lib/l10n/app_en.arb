@@ -103,5 +103,7 @@
   "logFile": "Log file",
   "shareLogs": "Share logs",
   "clearLogs": "Clear logs",
-  "logsCleared": "Logs cleared"
+  "logsCleared": "Logs cleared",
+  "fieldCreated": "Created",
+  "fieldModified": "Modified"
 }

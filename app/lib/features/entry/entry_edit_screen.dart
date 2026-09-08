@@ -9,15 +9,15 @@ const otpKinds = ['totp', 'hotp', 'steam', 'motp', 'yandex'];
 const otpAlgorithms = ['SHA1', 'SHA256', 'SHA512'];
 
 /// Opens the entry editor: a centered dialog on wide screens, a full page on
-/// phones. [existingUuid] null = create.
-Future<void> openEntryEditor(
+/// phones. [existingUuid] null = create. Returns the entry uuid on save.
+Future<String?> openEntryEditor(
   BuildContext context,
   WidgetRef ref, {
   String? existingUuid,
 }) async {
   final wide = MediaQuery.widthOf(context) >= 720;
   final saved = wide
-      ? await showDialog<bool>(
+      ? await showDialog<String>(
           context: context,
           builder: (context) => Dialog(
             child: ConstrainedBox(
@@ -26,9 +26,9 @@ Future<void> openEntryEditor(
             ),
           ),
         )
-      : await Navigator.push<bool>(
+      : await Navigator.push<String>(
           context,
-          MaterialPageRoute<bool>(
+          MaterialPageRoute<String>(
             builder: (_) => Scaffold(
               body: SafeArea(
                 child: EntryEditor(existingUuid: existingUuid),
@@ -36,10 +36,12 @@ Future<void> openEntryEditor(
             ),
           ),
         );
-  if (saved == true) {
+  if (saved != null) {
+    ref.read(selectedEntryProvider.notifier).select(saved);
     await ref.read(entriesProvider.notifier).refresh();
     await bridge.saveSession();
   }
+  return saved;
 }
 
 /// Unified add/edit form for password and 2FA entries (mirrors the CLI form).
@@ -132,7 +134,9 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
         _digits.text = '${otp.digits}';
         _period.text = '${otp.period}';
         _counter.text = '${otp.counter}';
-        _pin.text = otp.hasPin ? '' : '';
+        // PIN is preserved through the otpauth URI prefilled in _secret;
+        // the PIN field stays empty unless the user re-enters one.
+        _pin.clear();
       }
       if (otpUri != null) _secret.text = otpUri;
       _loaded = true;
@@ -192,7 +196,7 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
         }
       }
       if (!mounted) return;
-      Navigator.of(context).pop(true);
+      Navigator.of(context).pop(_existingUuid);
     } catch (e) {
       messenger
         ..hideCurrentSnackBar()

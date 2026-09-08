@@ -283,4 +283,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logsCleared => 'Logs cleared';
+
+  @override
+  String get fieldCreated => 'Created';
+
+  @override
+  String get fieldModified => 'Modified';
 }

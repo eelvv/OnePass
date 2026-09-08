@@ -84,6 +84,9 @@ class _LockScreenState extends ConsumerState<LockScreen> {
         Logger.i('unlocked (${entries.length} entries)');
       }
       await bridge.saveSession();
+      // Never keep the master password in a text controller.
+      _passwordController.clear();
+      _confirmController.clear();
     } catch (e, st) {
       Logger.e('unlock/create failed', e, st);
       error = friendlyError(l10n, e);

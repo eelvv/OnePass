@@ -282,4 +282,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get logsCleared => '日志已清空';
+
+  @override
+  String get fieldCreated => '创建于';
+
+  @override
+  String get fieldModified => '修改于';
 }

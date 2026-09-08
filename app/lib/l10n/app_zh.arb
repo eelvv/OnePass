@@ -89,5 +89,7 @@
   "logFile": "日志文件",
   "shareLogs": "分享日志",
   "clearLogs": "清空日志",
-  "logsCleared": "日志已清空"
+  "logsCleared": "日志已清空",
+  "fieldCreated": "创建于",
+  "fieldModified": "修改于"
 }
