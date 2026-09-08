@@ -1,0 +1,61 @@
+# OnePass Android app: Flutter UI + Rust engine, built via cargokit.
+#
+# Build machine requirements (GitHub ubuntu-latest runners have all of this):
+#   JDK 17, Flutter stable, Rust with aarch64-linux-android target, Android SDK/NDK.
+name: app
+
+on:
+  push:
+    branches: [main]
+    tags: ["app-v*"]
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # Bridge bindings (rust/src/frb_generated.rs, lib/src/rust/*) are COMMITTED
+      # so the build never needs the codegen tool. This step only guards against
+      # drift: regenerate and fail if the committed bindings are stale.
+      - name: Verify generated bridge code is up to date
+        working-directory: app
+        run: |
+          mkdir -p /tmp/frb
+          curl -sL https://github.com/fzyzcjy/flutter_rust_bridge/releases/download/v2.13.0/flutter_rust_bridge_codegen-x86_64-unknown-linux-musl-v2.13.0.tgz | tar xz -C /tmp/frb
+          /tmp/frb/flutter_rust_bridge_codegen generate
+          git diff --exit-code -- rust/src lib/src
+
+      # The Rust core (app/rust) is compiled by cargokit during this Gradle run
+      # and linked into the APK as librust_lib_onepass.so.
+      - name: Build release APK (debug-signed, installable)
+        working-directory: app
+        run: flutter build apk --release
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: onepass-apk-${{ github.sha }}
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+      - name: Attach APK to GitHub release (app-v* tags only)
+        if: startsWith(github.ref, 'refs/tags/app-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/app/outputs/flutter-apk/app-release.apk
