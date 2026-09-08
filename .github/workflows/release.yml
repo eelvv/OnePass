@@ -44,6 +44,9 @@ jobs:
     needs: plan
     if: needs.plan.outputs.component == 'all' || needs.plan.outputs.component == 'cli'
     uses: ./.github/workflows/cli.yml
+    with:
+      upload: true
+      tag: ${{ github.ref_name }}
     permissions:
       contents: write
     secrets: inherit

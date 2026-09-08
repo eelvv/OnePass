@@ -9,12 +9,25 @@ name: CLI build
 
 on:
   workflow_call:
+    inputs:
+      upload:
+        description: "Attach artifacts to the Release of `tag`"
+        type: boolean
+        default: true
+      tag:
+        description: "Tag whose Release receives the artifacts (required when upload = true)"
+        type: string
+        default: ""
   workflow_dispatch:
     inputs:
       upload:
-        description: "Upload artifacts to a Release (only valid when running on a tag ref)"
+        description: "Attach artifacts to the Release of `tag`"
         type: boolean
         default: false
+      tag:
+        description: "Tag whose Release receives the artifacts (required when upload = true)"
+        type: string
+        default: ""
 
 permissions:
   contents: write
@@ -36,7 +49,7 @@ jobs:
         with:
           prefix-key: onepass
           shared-key: rust
-          job: shared
+          add-job-id-key: false
           cache-on-failure: true
 
       - name: Run tests
@@ -71,7 +84,7 @@ jobs:
         with:
           prefix-key: onepass
           shared-key: rust
-          job: shared
+          add-job-id-key: false
           cache-on-failure: true
 
       - name: Build release binary
@@ -101,9 +114,8 @@ jobs:
           rm -rf staging
 
       - name: Upload to release
-        if: >-
-          (github.event_name == 'workflow_call' || inputs.upload == true)
-          && startsWith(github.ref, 'refs/tags/')
+        if: inputs.upload == true && inputs.tag != ''
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ inputs.tag }}
           files: ${{ matrix.artifact }}
