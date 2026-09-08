@@ -107,7 +107,5 @@ jobs:
         if: inputs.upload == true && inputs.tag != ''
         uses: softprops/action-gh-release@v3
         with:
-          # Searchable component word for the releases-page ?q= filter.
-          name: OnePass App ${{ inputs.tag }}
           tag_name: ${{ inputs.tag }}
           files: onepass-app-android-arm64.apk
