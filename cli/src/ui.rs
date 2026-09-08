@@ -266,7 +266,7 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
 
 #[allow(dead_code)]
 fn search_popup(f: &mut Frame, app: &App) {
-    let area = input_box(70, f.area());
+    let area = centered_box(70, 3, f.area());
     f.render_widget(Clear, area);
     let text = Paragraph::new(format!("{}█", app.input)).block(
         Block::new()
@@ -278,7 +278,7 @@ fn search_popup(f: &mut Frame, app: &App) {
 }
 
 fn input_path_popup(f: &mut Frame, app: &App) {
-    let area = input_box(70, f.area());
+    let area = centered_box(70, 3, f.area());
     f.render_widget(Clear, area);
     let title = match app.input_action {
         Some(PathAction::Import) => "Import — file path (Aegis JSON / URI list / migration URI)",
@@ -293,7 +293,7 @@ fn input_path_popup(f: &mut Frame, app: &App) {
 }
 
 fn confirm_popup(f: &mut Frame, app: &App) {
-    let area = centered_rect(60, 12, f.area());
+    let area = centered_box(60, 5, f.area());
     f.render_widget(Clear, area);
     let text = match app.confirm {
         Some(ConfirmAction::Quit) => {
@@ -312,7 +312,7 @@ fn confirm_popup(f: &mut Frame, app: &App) {
 }
 
 fn change_password_popup(f: &mut Frame, app: &App) {
-    let area = centered_rect(60, 14, f.area());
+    let area = centered_box(60, 7, f.area());
     f.render_widget(Clear, area);
     let masked: String = "•".repeat(app.input.chars().count().min(40));
     let lines = vec![
@@ -572,38 +572,43 @@ fn render_twofa_fields(lines: &mut Vec<Line>, form: &AddForm) {
     }
 }
 
+/// Centers a fixed-size box (total `lines` height incl. borders) at
+/// `width_pct` width, both vertically and horizontally. `Fill` spacers
+/// guarantee true centering at any terminal size.
+fn centered_box(width_pct: u16, lines: u16, r: Rect) -> Rect {
+    let [_, v_box, _] = Layout::vertical([
+        Constraint::Fill(1),
+        Constraint::Length(lines),
+        Constraint::Fill(1),
+    ])
+    .areas(r);
+    let [_, h_box, _] = Layout::horizontal([
+        Constraint::Fill(1),
+        Constraint::Percentage(width_pct),
+        Constraint::Fill(1),
+    ])
+    .areas(v_box);
+    h_box
+}
+
+/// Centers a percentage-sized box both ways (for tall popups like form/help).
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
     let [_, vy, _] = Layout::vertical([
-        Constraint::Percentage((100 - percent_y) / 2),
+        Constraint::Fill(1),
         Constraint::Percentage(percent_y),
-        Constraint::Percentage((100 - percent_y) / 2),
+        Constraint::Fill(1),
     ])
     .areas(r);
     let [_, hx, _] = Layout::horizontal([
-        Constraint::Percentage((100 - percent_x) / 2),
+        Constraint::Fill(1),
         Constraint::Percentage(percent_x),
-        Constraint::Percentage((100 - percent_x) / 2),
+        Constraint::Fill(1),
     ])
     .areas(vy);
     hx
 }
 
 /// Fixed 3-line centered box: top border + 1 content line + bottom border.
-fn input_box(width_pct: u16, r: Rect) -> Rect {
-    let [_, v_box, _] = Layout::vertical([
-        Constraint::Length(2),
-        Constraint::Length(3),
-        Constraint::Length(2),
-    ])
-    .areas(r);
-    let [_, h_box, _] = Layout::horizontal([
-        Constraint::Percentage((100 - width_pct) / 2),
-        Constraint::Percentage(width_pct),
-        Constraint::Percentage((100 - width_pct) / 2),
-    ])
-    .areas(v_box);
-    h_box
-}
 fn count_entries(g: &onepass_engine::db::Group) -> usize {
     g.entries.len() + g.groups.iter().map(count_entries).sum::<usize>()
 }
