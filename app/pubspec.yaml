@@ -41,8 +41,8 @@ dependencies:
   flutter_riverpod: ^2.6.1
   shared_preferences: ^2.3.3
   path_provider: ^2.1.4
-  file_picker: ^8.1.6
-  share_plus: ^10.1.2
+  file_picker: ^12.2.0
+  share_plus: ^13.3.0
   # Local plugin that builds the Rust core (cargokit) and bundles the native lib.
   rust_lib_onepass:
     path: rust_builder

@@ -92,12 +92,10 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
 
   Future<void> _importFile() async {
     final l10n = context.l10n;
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
-      withData: true,
-    );
-    final bytes = result?.files.single.bytes;
-    if (bytes == null) return;
+    final files = await FilePicker.pickFiles(type: FileType.any);
+    final picked = files.firstOrNull;
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
     try {
       final imported = await bridge.importFromBytes(bytes: bytes);
       await _afterMutation();
@@ -160,7 +158,9 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
   Future<void> _exportOtpauth() async {
     final l10n = context.l10n;
     final text = await bridge.exportOtpauthText();
-    await Share.share(text, subject: 'OnePass otpauth');
+    await SharePlus.instance.share(
+      ShareParams(text: text, subject: 'OnePass otpauth'),
+    );
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.exportShared)),
@@ -174,9 +174,11 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
     final tmp = '${Directory.systemTemp.path}/onepass-aegis-'
         '${DateTime.now().millisecondsSinceEpoch}.json';
     await File(tmp).writeAsBytes(bytes);
-    await Share.shareXFiles(
-      [XFile(tmp, mimeType: 'application/json')],
-      subject: 'OnePass Aegis export',
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(tmp, mimeType: 'application/json')],
+        subject: 'OnePass Aegis export',
+      ),
     );
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
