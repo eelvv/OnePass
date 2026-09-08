@@ -1,10 +1,11 @@
 //! OnePass core engine.
 //!
-//! Independent implementation (written from scratch) of the crypto/format
-//! logic needed by OnePass. Functionally referenced from KeePassDX and Aegis,
-//! but no GPL code is copied: only public standards (RFC 4226/6238, Google
-//! Key URI format) and publicly documented de-facto algorithms (Steam, MOTP,
-//! Yandex.Key) are re-implemented here.
+//! A from-scratch implementation of the cryptographic and format logic needed
+//! by OnePass: KeePass KDBX 4 read/write, OTP algorithms (RFC 4226/6238 plus
+//! Steam/MOTP/Yandex), `otpauth://` URI parsing, and 2FA import/export.
+//!
+//! Only public standards and publicly documented de-facto algorithms are
+//! implemented; no GPL code is copied.
 
 pub mod cipher;
 pub mod db;

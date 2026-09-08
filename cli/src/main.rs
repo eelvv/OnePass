@@ -1,10 +1,10 @@
-//! OnePass CLI — an interactive TUI password manager + 2FA console.
+//! OnePass CLI — interactive TUI password manager and 2FA console.
 //!
 //! Usage:
 //!   onepass-cli [vault.kdbx]
 //!
 //! Opens (or creates) a KeePass-compatible `.kdbx` vault and provides a
-//! full-screen terminal UI: entry browsing, editing, 2FA codes with live
+//! full-screen terminal UI for browsing, editing, 2FA codes with a live
 //! countdown, and import/export.
 
 mod app;
