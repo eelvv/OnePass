@@ -100,6 +100,11 @@ Future<BigInt> deleteEntries({required List<String> uuidHexes}) =>
 Future<OtpInfoDto?> otpInfo({required String uuidHex}) =>
     RustLib.instance.api.crateApiVaultOtpInfo(uuidHex: uuidHex);
 
+/// Parses an `otpauth://` URI (e.g. a scanned QR payload) into display
+/// fields. Cheap and side-effect free.
+OtpInfoDto parseOtpauthUri({required String uri}) =>
+    RustLib.instance.api.crateApiVaultParseOtpauthUri(uri: uri);
+
 /// Current OTP code at `time_secs` (unix seconds); cheap enough for 1s ticks.
 String? otpCode({required String uuidHex, required BigInt timeSecs}) => RustLib
     .instance

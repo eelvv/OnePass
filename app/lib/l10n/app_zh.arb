@@ -91,5 +91,13 @@
   "clearLogs": "清空日志",
   "logsCleared": "日志已清空",
   "fieldCreated": "创建于",
-  "fieldModified": "修改于"
+  "fieldModified": "修改于",
+  "addPassword": "添加密码",
+  "scanAdd2fa": "扫码添加 2FA",
+  "manualAdd2fa": "手动输入 2FA",
+  "importData": "导入…",
+  "scanQr": "扫描二维码",
+  "scanTorch": "手电筒",
+  "scanHint": "将 otpauth:// 二维码对准取景框",
+  "scanCameraError": "相机不可用，请在系统设置中检查相机权限。"
 }

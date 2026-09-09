@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+        <!-- Camera: QR-based 2FA entry (mobile_scanner) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
     <application
         android:label="onepass"
         android:name="${applicationName}"

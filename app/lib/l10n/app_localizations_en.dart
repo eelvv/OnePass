@@ -289,4 +289,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fieldModified => 'Modified';
+
+  @override
+  String get addPassword => 'Add password';
+
+  @override
+  String get scanAdd2fa => 'Scan 2FA QR code';
+
+  @override
+  String get manualAdd2fa => 'Enter 2FA manually';
+
+  @override
+  String get importData => 'Import…';
+
+  @override
+  String get scanQr => 'Scan QR code';
+
+  @override
+  String get scanTorch => 'Torch';
+
+  @override
+  String get scanHint => 'Point the camera at an otpauth:// QR code';
+
+  @override
+  String get scanCameraError =>
+      'Camera unavailable. Check camera permission in system settings.';
 }

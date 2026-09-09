@@ -257,6 +257,22 @@ pub(crate) fn core_delete_entries(uuid_hexes: &[String]) -> BridgeResult<usize> 
 // ---------------------------------------------------------------------------
 // OTP
 
+/// Parses an `otpauth://` URI (QR payload) into display fields so the editor
+/// can prefill before saving. No session required.
+pub(crate) fn core_parse_otpauth(uri: &str) -> BridgeResult<OtpInfoDto> {
+    let p = onepass_engine::uri::parse(uri)?;
+    Ok(OtpInfoDto {
+        kind: p.kind.as_str().to_string(),
+        issuer: p.issuer.clone(),
+        account: p.account.clone(),
+        algorithm: p.algorithm.as_str().to_string(),
+        digits: p.digits,
+        period: p.period,
+        counter: p.counter,
+        has_pin: p.pin.is_some(),
+    })
+}
+
 pub(crate) fn core_otp_info(uuid_hex: &str) -> BridgeResult<Option<OtpInfoDto>> {
     with_session(|s| {
         let uuid = decode_uuid(uuid_hex)?;

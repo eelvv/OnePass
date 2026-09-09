@@ -12,6 +12,7 @@ import '../../src/rust/api/vault.dart' as bridge;
 import '../../state/providers.dart';
 import '../entry/entry_detail_pane.dart';
 import '../entry/entry_edit_screen.dart';
+import '../entry/qr_scan_screen.dart';
 import '../settings/settings_screen.dart';
 
 /// Entry list + (on wide screens) the detail pane. Master-detail adapts to
@@ -267,6 +268,63 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
     );
   }
 
+  /// Add-entry menu (FAB): password / QR-scan 2FA / manual 2FA / import.
+  Future<void> _showAddSheet() async {
+    final l10n = context.l10n;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.key_outlined),
+              title: Text(l10n.addPassword),
+              onTap: () => Navigator.pop(sheetContext, 'password'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.qr_code_scanner),
+              title: Text(l10n.scanAdd2fa),
+              onTap: () => Navigator.pop(sheetContext, 'scan'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_note),
+              title: Text(l10n.manualAdd2fa),
+              onTap: () => Navigator.pop(sheetContext, 'manual2fa'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.download_outlined),
+              title: Text(l10n.importData),
+              onTap: () => Navigator.pop(sheetContext, 'import'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || choice == null) return;
+    switch (choice) {
+      case 'password':
+        await openEntryEditor(context, ref);
+      case 'scan':
+        final uri = await Navigator.push<String>(
+          context,
+          MaterialPageRoute(builder: (_) => const QrScanScreen()),
+        );
+        if (!mounted || uri == null) return;
+        await openEntryEditor(
+          context,
+          ref,
+          initialType2fa: true,
+          initialSecretOrUri: uri,
+        );
+      case 'manual2fa':
+        await openEntryEditor(context, ref, initialType2fa: true);
+      case 'import':
+        _showIoSheet();
+    }
+  }
+
   void _showIoSheet() {
     final l10n = context.l10n;
     showModalBottomSheet<void>(
@@ -480,7 +538,7 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'add-entry-wide',
-        onPressed: () => openEntryEditor(context, ref),
+        onPressed: _showAddSheet,
         tooltip: l10n.addEntry,
         child: const Icon(Icons.add),
       ),

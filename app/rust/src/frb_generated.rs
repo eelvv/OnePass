@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 201652701;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1861753174;
 
 // Section: executor
 
@@ -811,6 +811,36 @@ fn wire__crate__api__vault__otp_info_impl(
         },
     )
 }
+fn wire__crate__api__vault__parse_otpauth_uri_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "parse_otpauth_uri",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_uri = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, crate::api::error::BridgeError>((move || {
+                let output_ok = crate::api::vault::parse_otpauth_uri(api_uri)?;
+                std::result::Result::Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__vault__reveal_field_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1302,10 +1332,10 @@ fn pde_ffi_dispatcher_primary_impl(
         19 => wire__crate__api__vault__lock_vault_impl(port, ptr, rust_vec_len, data_len),
         20 => wire__crate__api__vault__open_vault_impl(port, ptr, rust_vec_len, data_len),
         22 => wire__crate__api__vault__otp_info_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__vault__reveal_field_impl(port, ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__vault__save_session_impl(port, ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__vault__update_otp_entry_impl(port, ptr, rust_vec_len, data_len),
-        26 => {
+        24 => wire__crate__api__vault__reveal_field_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__vault__save_session_impl(port, ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__vault__update_otp_entry_impl(port, ptr, rust_vec_len, data_len),
+        27 => {
             wire__crate__api__vault__update_password_entry_impl(port, ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -1326,6 +1356,7 @@ fn pde_ffi_dispatcher_sync_impl(
         16 => wire__crate__api__vault__is_dirty_impl(ptr, rust_vec_len, data_len),
         17 => wire__crate__api__vault__is_unlocked_impl(ptr, rust_vec_len, data_len),
         21 => wire__crate__api__vault__otp_code_impl(ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__vault__parse_otpauth_uri_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }

@@ -649,6 +649,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Modified'**
   String get fieldModified;
+
+  /// No description provided for @addPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Add password'**
+  String get addPassword;
+
+  /// No description provided for @scanAdd2fa.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan 2FA QR code'**
+  String get scanAdd2fa;
+
+  /// No description provided for @manualAdd2fa.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter 2FA manually'**
+  String get manualAdd2fa;
+
+  /// No description provided for @importData.
+  ///
+  /// In en, this message translates to:
+  /// **'Import…'**
+  String get importData;
+
+  /// No description provided for @scanQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan QR code'**
+  String get scanQr;
+
+  /// No description provided for @scanTorch.
+  ///
+  /// In en, this message translates to:
+  /// **'Torch'**
+  String get scanTorch;
+
+  /// No description provided for @scanHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Point the camera at an otpauth:// QR code'**
+  String get scanHint;
+
+  /// No description provided for @scanCameraError.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera unavailable. Check camera permission in system settings.'**
+  String get scanCameraError;
 }
 
 class _AppLocalizationsDelegate

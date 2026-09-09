@@ -110,6 +110,13 @@ pub async fn otp_info(uuid_hex: String) -> BridgeResult<Option<OtpInfoDto>> {
     logic::core_otp_info(&uuid_hex)
 }
 
+/// Parses an `otpauth://` URI (e.g. a scanned QR payload) into display
+/// fields. Cheap and side-effect free.
+#[flutter_rust_bridge::frb(sync)]
+pub fn parse_otpauth_uri(uri: String) -> BridgeResult<OtpInfoDto> {
+    logic::core_parse_otpauth(&uri)
+}
+
 /// Current OTP code at `time_secs` (unix seconds); cheap enough for 1s ticks.
 #[flutter_rust_bridge::frb(sync)]
 pub fn otp_code(uuid_hex: String, time_secs: u64) -> BridgeResult<Option<String>> {

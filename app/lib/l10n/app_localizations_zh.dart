@@ -288,4 +288,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get fieldModified => '修改于';
+
+  @override
+  String get addPassword => '添加密码';
+
+  @override
+  String get scanAdd2fa => '扫码添加 2FA';
+
+  @override
+  String get manualAdd2fa => '手动输入 2FA';
+
+  @override
+  String get importData => '导入…';
+
+  @override
+  String get scanQr => '扫描二维码';
+
+  @override
+  String get scanTorch => '手电筒';
+
+  @override
+  String get scanHint => '将 otpauth:// 二维码对准取景框';
+
+  @override
+  String get scanCameraError => '相机不可用，请在系统设置中检查相机权限。';
 }
