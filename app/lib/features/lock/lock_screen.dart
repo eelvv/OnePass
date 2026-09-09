@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../shared/errors.dart';
+import '../../shared/biometric.dart';
 import '../../shared/logger.dart';
 import '../../src/rust/api/vault.dart' as bridge;
 import '../../state/providers.dart';
@@ -28,6 +29,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
   bool _createMode = false;
   bool _modeResolved = false;
   bool _busy = false;
+  bool _biometricReady = false;
 
   @override
   void initState() {
@@ -46,12 +48,58 @@ class _LockScreenState extends ConsumerState<LockScreen> {
   Future<void> _resolveMode() async {
     final path = await ref.read(vaultPathProvider.future);
     final exists = await File(path).exists();
+    final settings = ref.read(settingsProvider);
+    final canBiometric =
+        settings.biometricEnabled && await BiometricService.canAuthenticate();
     if (mounted) {
       setState(() {
         _createMode = !exists;
+        _biometricReady = !exists && canBiometric;
         _modeResolved = true;
       });
     }
+  }
+
+  /// Biometric unlock: authenticate, read the stored master password and
+  /// open the vault with it.
+  Future<void> _biometricUnlock() async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await BiometricService.authenticate(l10n.biometricReason);
+    if (!ok) return;
+    final password = await BiometricService.readPassword();
+    if (password == null || !mounted) return;
+
+    final path = await ref.read(vaultPathProvider.future);
+    String? error;
+    try {
+      final entries = await bridge.openVault(
+        path: path,
+        password: password.codeUnits,
+      );
+      ref.read(entriesProvider.notifier).apply(entries);
+      Logger.i('biometric unlock ok (${entries.length} entries)');
+    } catch (e, st) {
+      Logger.e('biometric unlock failed', e, st);
+      error = friendlyError(l10n, e);
+      // Stored password no longer matches (vault re-imported?): drop it.
+      await BiometricService.forget();
+      if (mounted) {
+        ref.read(settingsProvider.notifier).update(
+              ref.read(settingsProvider).copyWith(biometricEnabled: false),
+            );
+      }
+    }
+    if (!mounted) return;
+    if (error != null) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(error)));
+      if (mounted) setState(() => _biometricReady = false);
+      return;
+    }
+    ref.read(lockedProvider.notifier).setLocked(false);
+    widget.onUnlocked();
   }
 
   Future<void> _submit() async {
@@ -199,6 +247,14 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                   )
                 : Text(_createMode ? l10n.createVault : l10n.unlock),
           ),
+          if (_biometricReady && !_createMode) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _biometricUnlock,
+              icon: const Icon(Icons.fingerprint),
+              label: Text(l10n.unlockWithBiometric),
+            ),
+          ],
         ],
       ),
     );

@@ -30,6 +30,12 @@ pub async fn import_vault_file(
     logic::core_import_vault_file(&path, Zeroizing::new(password), &target)
 }
 
+/// Validates a master password against the vault file without opening a
+/// session (used when enabling biometric unlock).
+pub async fn check_vault_password(path: String, password: Vec<u8>) -> BridgeResult<bool> {
+    logic::core_check_vault_password(&path, Zeroizing::new(password))
+}
+
 /// Creates a new vault in memory. Call `save_session` to write it to disk.
 pub async fn create_vault(path: String, name: String, password: Vec<u8>) -> BridgeResult<()> {
     logic::core_create(&path, &name, Zeroizing::new(password))

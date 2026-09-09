@@ -3,9 +3,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import 'l10n/app_localizations.dart';
 import 'shared/logger.dart';
@@ -32,6 +34,12 @@ Future<void> main() async {
   // All engine logic lives in Rust; Dart only calls across the FFI boundary.
   await RustLib.init();
   final prefs = await SharedPreferences.getInstance();
+  // Apply FLAG_SECURE before the first frame when enabled (the Android
+  // side also re-applies it at engine start from the same preference).
+  if (prefs.getBool('flagSecure') ?? false) {
+    await const MethodChannel('onepass/security')
+        .invokeMethod('setFlagSecure', {'enabled': true});
+  }
   runApp(ProviderScope(
     overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
     child: const OnePassApp(),
@@ -47,6 +55,8 @@ class OnePassApp extends ConsumerStatefulWidget {
 
 class _OnePassAppState extends ConsumerState<OnePassApp>
     with WidgetsBindingObserver {
+  DateTime? _pausedAt;
+
   @override
   void initState() {
     super.initState();
@@ -62,14 +72,31 @@ class _OnePassAppState extends ConsumerState<OnePassApp>
   @override
   Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
     super.didChangeAppLifecycleState(state);
-    // Auto-lock: drop the Rust session (password zeroized) when the app is
-    // backgrounded, if the user has not disabled it.
-    if (state == AppLifecycleState.paused &&
-        ref.read(settingsProvider).lockOnBackground &&
-        !ref.read(lockedProvider)) {
-      Logger.i('auto-lock on background');
-      await bridge.lockVault();
-      ref.read(lockedProvider.notifier).setLocked(true);
+    // Auto-lock with a configurable grace period. Dart timers are
+    // unreliable while backgrounded, so the check re-runs on resume:
+    // - lockGraceSecs == 0 locks immediately on pause
+    // - otherwise the elapsed background time is compared on resume
+    final grace = ref.read(settingsProvider).lockGraceSecs;
+    final alreadyLocked = ref.read(lockedProvider);
+    if (!ref.read(settingsProvider).lockOnBackground || alreadyLocked) {
+      return;
+    }
+    if (state == AppLifecycleState.paused) {
+      if (grace <= 0) {
+        Logger.i('auto-lock on background (immediate)');
+        await bridge.lockVault();
+        ref.read(lockedProvider.notifier).setLocked(true);
+      } else {
+        _pausedAt = DateTime.now();
+      }
+    } else if (state == AppLifecycleState.resumed && _pausedAt != null) {
+      final gone = DateTime.now().difference(_pausedAt!).inSeconds;
+      _pausedAt = null;
+      if (gone >= grace) {
+        Logger.i('auto-lock: background grace of $grace s exceeded ($gone s)');
+        await bridge.lockVault();
+        ref.read(lockedProvider.notifier).setLocked(true);
+      }
     }
   }
 

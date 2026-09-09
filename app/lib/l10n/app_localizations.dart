@@ -697,6 +697,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Camera unavailable. Check camera permission in system settings.'**
   String get scanCameraError;
+
+  /// No description provided for @biometricUnlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric unlock'**
+  String get biometricUnlock;
+
+  /// No description provided for @unlockWithBiometric.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock with biometrics'**
+  String get unlockWithBiometric;
+
+  /// No description provided for @biometricReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock OnePass'**
+  String get biometricReason;
+
+  /// No description provided for @biometricNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometrics unavailable on this device'**
+  String get biometricNotAvailable;
+
+  /// No description provided for @enableBiometricPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the current master password to enable biometric unlock'**
+  String get enableBiometricPrompt;
+
+  /// No description provided for @flagSecure.
+  ///
+  /// In en, this message translates to:
+  /// **'Prevent screenshots'**
+  String get flagSecure;
+
+  /// No description provided for @lockGrace.
+  ///
+  /// In en, this message translates to:
+  /// **'Background lock delay'**
+  String get lockGrace;
+
+  /// No description provided for @graceImmediate.
+  ///
+  /// In en, this message translates to:
+  /// **'Immediately'**
+  String get graceImmediate;
+
+  /// No description provided for @grace30s.
+  ///
+  /// In en, this message translates to:
+  /// **'30 seconds'**
+  String get grace30s;
+
+  /// No description provided for @grace1m.
+  ///
+  /// In en, this message translates to:
+  /// **'1 minute'**
+  String get grace1m;
+
+  /// No description provided for @grace5m.
+  ///
+  /// In en, this message translates to:
+  /// **'5 minutes'**
+  String get grace5m;
 }
 
 class _AppLocalizationsDelegate

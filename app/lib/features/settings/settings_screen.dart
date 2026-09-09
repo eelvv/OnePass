@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../shared/biometric.dart';
 import '../../shared/errors.dart';
 import '../../shared/logger.dart';
 import '../../src/rust/api/vault.dart' as bridge;
@@ -51,6 +53,77 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         SnackBar(content: Text(l10n.passwordChanged)),
       );
     }
+  }
+
+  Future<void> _toggleBiometric(bool want) async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final controller = ref.read(settingsProvider.notifier);
+    final settings = ref.read(settingsProvider);
+
+    if (!want) {
+      // Disabling: confirm with biometrics, then forget the stored password.
+      final ok = await BiometricService.authenticate(l10n.biometricReason);
+      if (ok) {
+        await BiometricService.forget();
+        await controller.update(settings.copyWith(biometricEnabled: false));
+        Logger.i('biometric unlock disabled');
+      }
+      return;
+    }
+
+    if (!await BiometricService.canAuthenticate()) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.biometricNotAvailable)));
+      return;
+    }
+    if (!await BiometricService.authenticate(l10n.biometricReason)) return;
+    if (!mounted) return;
+
+    final pwController = TextEditingController();
+    final password = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.biometricUnlock),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(l10n.enableBiometricPrompt),
+            const SizedBox(height: 12),
+            TextField(
+              controller: pwController,
+              obscureText: true,
+              autofocus: true,
+              decoration: InputDecoration(labelText: l10n.masterPassword),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, pwController.text),
+            child: Text(l10n.save),
+          ),
+        ],
+      ),
+    );
+    pwController.dispose();
+    if (password == null || password.isEmpty || !mounted) return;
+
+    final path = await ref.read(vaultPathProvider.future);
+    final valid = await bridge.checkVaultPassword(
+      path: path,
+      password: password.codeUnits,
+    );
+    if (!valid) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.wrongPassword)));
+      return;
+    }
+    await BiometricService.storePassword(password);
+    await controller.update(settings.copyWith(biometricEnabled: true));
+    Logger.i('biometric unlock enabled');
   }
 
   @override
@@ -154,12 +227,58 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               _SectionHeader(l10n.security),
               Card(
-                child: SwitchListTile(
-                  secondary: const Icon(Icons.lock_clock_outlined),
-                  title: Text(l10n.lockOnBackground),
-                  value: settings.lockOnBackground,
-                  onChanged: (v) =>
-                      controller.update(settings.copyWith(lockOnBackground: v)),
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      secondary: const Icon(Icons.lock_clock_outlined),
+                      title: Text(l10n.lockOnBackground),
+                      value: settings.lockOnBackground,
+                      onChanged: (v) => controller
+                          .update(settings.copyWith(lockOnBackground: v)),
+                    ),
+                    if (settings.lockOnBackground)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(l10n.lockGrace,
+                                  style:
+                                      Theme.of(context).textTheme.bodyMedium),
+                            ),
+                            SegmentedButton<int>(
+                              segments: const [
+                                ButtonSegment(value: 0, label: Text('0s')),
+                                ButtonSegment(value: 30, label: Text('30s')),
+                                ButtonSegment(value: 60, label: Text('1m')),
+                                ButtonSegment(value: 300, label: Text('5m')),
+                              ],
+                              selected: {settings.lockGraceSecs},
+                              onSelectionChanged: (s) => controller.update(
+                                  settings.copyWith(lockGraceSecs: s.first)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    SwitchListTile(
+                      secondary: const Icon(Icons.fingerprint),
+                      title: Text(l10n.biometricUnlock),
+                      value: settings.biometricEnabled,
+                      onChanged: (want) => _toggleBiometric(want),
+                    ),
+                    SwitchListTile(
+                      secondary: const Icon(Icons.visibility_off_outlined),
+                      title: Text(l10n.flagSecure),
+                      value: settings.flagSecure,
+                      onChanged: (v) async {
+                        await controller
+                            .update(settings.copyWith(flagSecure: v));
+                        await const MethodChannel('onepass/security')
+                            .invokeMethod('setFlagSecure', {'enabled': v});
+                        Logger.i('flagSecure=$v');
+                      },
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 8),

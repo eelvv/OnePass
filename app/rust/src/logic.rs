@@ -127,6 +127,21 @@ pub(crate) fn core_import_vault_file(
     Ok(dtos)
 }
 
+/// Checks whether `password` unlocks the vault file at `path` without
+/// touching the current session (used when enabling biometric unlock).
+pub(crate) fn core_check_vault_password(
+    path: &str,
+    password: Zeroizing<Vec<u8>>,
+) -> BridgeResult<bool> {
+    let data = std::fs::read(path)
+        .map_err(|e| BridgeError::new(ErrorKind::Io, format!("read {path}: {e}")))?;
+    match onepass_engine::db::open(&data, password.as_slice()) {
+        Ok(_) => Ok(true),
+        Err(onepass_engine::error::Error::WrongPassword) => Ok(false),
+        Err(e) => Err(e.into()),
+    }
+}
+
 pub(crate) fn core_lock() -> BridgeResult<()> {
     *lock_session() = None; // SessionState drops: password zeroized
     Ok(())

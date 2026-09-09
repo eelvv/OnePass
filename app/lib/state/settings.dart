@@ -12,6 +12,9 @@ class AppSettings {
     this.locale = LocaleSetting.system,
     this.seedIndex = 0,
     this.lockOnBackground = true,
+    this.lockGraceSecs = 60,
+    this.biometricEnabled = false,
+    this.flagSecure = false,
   });
 
   final ThemeModeSetting themeMode;
@@ -19,17 +22,33 @@ class AppSettings {
   final int seedIndex;
   final bool lockOnBackground;
 
+  /// Grace period (seconds) before locking after the app is backgrounded.
+  /// 0 = lock immediately.
+  final int lockGraceSecs;
+
+  /// Biometric unlock enabled (master password stored in secure storage).
+  final bool biometricEnabled;
+
+  /// FLAG_SECURE: prevent screenshots / app-switcher preview.
+  final bool flagSecure;
+
   AppSettings copyWith({
     ThemeModeSetting? themeMode,
     LocaleSetting? locale,
     int? seedIndex,
     bool? lockOnBackground,
+    int? lockGraceSecs,
+    bool? biometricEnabled,
+    bool? flagSecure,
   }) =>
       AppSettings(
         themeMode: themeMode ?? this.themeMode,
         locale: locale ?? this.locale,
         seedIndex: seedIndex ?? this.seedIndex,
         lockOnBackground: lockOnBackground ?? this.lockOnBackground,
+        lockGraceSecs: lockGraceSecs ?? this.lockGraceSecs,
+        biometricEnabled: biometricEnabled ?? this.biometricEnabled,
+        flagSecure: flagSecure ?? this.flagSecure,
       );
 }
 
@@ -57,6 +76,10 @@ class SettingsController extends Notifier<AppSettings> {
           .clamp(0, LocaleSetting.values.length - 1)],
       seedIndex: _prefs.getInt('seedIndex') ?? 0,
       lockOnBackground: _prefs.getBool('lockOnBackground') ?? true,
+      lockGraceSecs:
+          (_prefs.getInt('lockGraceSecs') ?? 60).clamp(0, 300),
+      biometricEnabled: _prefs.getBool('biometricEnabled') ?? false,
+      flagSecure: _prefs.getBool('flagSecure') ?? false,
     );
   }
 
@@ -66,5 +89,8 @@ class SettingsController extends Notifier<AppSettings> {
     await _prefs.setInt('locale', next.locale.index);
     await _prefs.setInt('seedIndex', next.seedIndex);
     await _prefs.setBool('lockOnBackground', next.lockOnBackground);
+    await _prefs.setInt('lockGraceSecs', next.lockGraceSecs);
+    await _prefs.setBool('biometricEnabled', next.biometricEnabled);
+    await _prefs.setBool('flagSecure', next.flagSecure);
   }
 }

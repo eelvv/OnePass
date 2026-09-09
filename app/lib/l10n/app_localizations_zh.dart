@@ -312,4 +312,37 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get scanCameraError => '相机不可用，请在系统设置中检查相机权限。';
+
+  @override
+  String get biometricUnlock => '指纹解锁';
+
+  @override
+  String get unlockWithBiometric => '使用指纹解锁';
+
+  @override
+  String get biometricReason => '验证指纹以解锁 OnePass';
+
+  @override
+  String get biometricNotAvailable => '此设备不支持生物识别';
+
+  @override
+  String get enableBiometricPrompt => '输入当前主密码以启用指纹解锁';
+
+  @override
+  String get flagSecure => '禁止截屏';
+
+  @override
+  String get lockGrace => '后台锁定延迟';
+
+  @override
+  String get graceImmediate => '立即';
+
+  @override
+  String get grace30s => '30 秒';
+
+  @override
+  String get grace1m => '1 分钟';
+
+  @override
+  String get grace5m => '5 分钟';
 }

@@ -28,6 +28,16 @@ Future<List<EntryDto>> importVaultFile({
   target: target,
 );
 
+/// Validates a master password against the vault file without opening a
+/// session (used when enabling biometric unlock).
+Future<bool> checkVaultPassword({
+  required String path,
+  required List<int> password,
+}) => RustLib.instance.api.crateApiVaultCheckVaultPassword(
+  path: path,
+  password: password,
+);
+
 /// Creates a new vault in memory. Call `save_session` to write it to disk.
 Future<void> createVault({
   required String path,

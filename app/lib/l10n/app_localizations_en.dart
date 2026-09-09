@@ -314,4 +314,38 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get scanCameraError =>
       'Camera unavailable. Check camera permission in system settings.';
+
+  @override
+  String get biometricUnlock => 'Biometric unlock';
+
+  @override
+  String get unlockWithBiometric => 'Unlock with biometrics';
+
+  @override
+  String get biometricReason => 'Unlock OnePass';
+
+  @override
+  String get biometricNotAvailable => 'Biometrics unavailable on this device';
+
+  @override
+  String get enableBiometricPrompt =>
+      'Enter the current master password to enable biometric unlock';
+
+  @override
+  String get flagSecure => 'Prevent screenshots';
+
+  @override
+  String get lockGrace => 'Background lock delay';
+
+  @override
+  String get graceImmediate => 'Immediately';
+
+  @override
+  String get grace30s => '30 seconds';
+
+  @override
+  String get grace1m => '1 minute';
+
+  @override
+  String get grace5m => '5 minutes';
 }

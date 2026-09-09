@@ -113,5 +113,16 @@
   "scanQr": "Scan QR code",
   "scanTorch": "Torch",
   "scanHint": "Point the camera at an otpauth:// QR code",
-  "scanCameraError": "Camera unavailable. Check camera permission in system settings."
+  "scanCameraError": "Camera unavailable. Check camera permission in system settings.",
+  "biometricUnlock": "Biometric unlock",
+  "unlockWithBiometric": "Unlock with biometrics",
+  "biometricReason": "Unlock OnePass",
+  "biometricNotAvailable": "Biometrics unavailable on this device",
+  "enableBiometricPrompt": "Enter the current master password to enable biometric unlock",
+  "flagSecure": "Prevent screenshots",
+  "lockGrace": "Background lock delay",
+  "graceImmediate": "Immediately",
+  "grace30s": "30 seconds",
+  "grace1m": "1 minute",
+  "grace5m": "5 minutes"
 }

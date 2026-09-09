@@ -99,5 +99,16 @@
   "scanQr": "扫描二维码",
   "scanTorch": "手电筒",
   "scanHint": "将 otpauth:// 二维码对准取景框",
-  "scanCameraError": "相机不可用，请在系统设置中检查相机权限。"
+  "scanCameraError": "相机不可用，请在系统设置中检查相机权限。",
+  "biometricUnlock": "指纹解锁",
+  "unlockWithBiometric": "使用指纹解锁",
+  "biometricReason": "验证指纹以解锁 OnePass",
+  "biometricNotAvailable": "此设备不支持生物识别",
+  "enableBiometricPrompt": "输入当前主密码以启用指纹解锁",
+  "flagSecure": "禁止截屏",
+  "lockGrace": "后台锁定延迟",
+  "graceImmediate": "立即",
+  "grace30s": "30 秒",
+  "grace1m": "1 分钟",
+  "grace5m": "5 分钟"
 }
