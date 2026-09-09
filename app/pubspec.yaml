@@ -43,7 +43,7 @@ dependencies:
   path_provider: ^2.1.4
   file_picker: ^12.2.0
   share_plus: ^13.3.0
-  mobile_scanner: ^7.4.0
+  flutter_zxing: ^3.0.1
   # Local plugin that builds the Rust core (cargokit) and bundles the native lib.
   rust_lib_onepass:
     path: rust_builder
