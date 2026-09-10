@@ -519,7 +519,7 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
         body: listBody,
         floatingActionButton: FloatingActionButton(
           heroTag: 'add-entry',
-          onPressed: () => openEntryEditor(context, ref),
+          onPressed: _showAddSheet,
           tooltip: l10n.addEntry,
           child: const Icon(Icons.add),
         ),
