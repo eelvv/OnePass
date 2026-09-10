@@ -51,7 +51,7 @@ Future<String?> openEntryEditor(
             ),
           ),
         );
-  if (saved != null) {
+  if (saved is String) {
     ref.read(selectedEntryProvider.notifier).select(saved);
     await ref.read(entriesProvider.notifier).refresh();
     await bridge.saveSession();
@@ -289,7 +289,10 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
         ),
         IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => Navigator.of(context).pop(false),
+          // null = cancelled; popping a non-String value on a
+          // MaterialPageRoute<String> throws a TypeError and aborts the
+          // pop, leaving the editor stuck open.
+          onPressed: () => Navigator.of(context).pop(null),
         ),
       ],
     );
