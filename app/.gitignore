@@ -49,3 +49,10 @@ app.*.map.json
 
 # Rust bridge build artifacts (cargokit compiles app/rust)
 /rust/target/
+
+# Release signing (keystore lives in GitHub Secrets + a local backup;
+# NEVER commit these)
+/key.properties
+/android/key.properties
+/android/app/*.jks
+/android/app/*.keystore

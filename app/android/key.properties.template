@@ -1,0 +1,11 @@
+# Template for the release signing config. Copy to key.properties (sibling of
+# this file, both live in android/) and drop the keystore into android/app/.
+# key.properties and *.jks are gitignored; CI restores both from GitHub
+# Secrets (see .github/workflows/app.yml).
+#
+#   cp key.properties.template key.properties
+#   # ...then edit the values below
+storeFile=onepass-release.jks
+storePassword=CHANGE_ME
+keyAlias=onepass
+keyPassword=CHANGE_ME

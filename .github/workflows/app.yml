@@ -84,10 +84,38 @@ jobs:
           /tmp/frb/flutter_rust_bridge_codegen generate
           git diff --exit-code -- rust/src lib/src
 
+      # Release signing: the keystore is stored as a base64 blob in repo
+      # secrets (ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD /
+      # ANDROID_KEY_ALIAS / ANDROID_KEY_PASSWORD). One stable key across all
+      # builds means APKs install over each other without the Android
+      # "signature is inconsistent" error. Without secrets the build falls
+      # back to the runner's ephemeral debug key (fresh checkouts still work).
+      - name: Check signing secrets
+        id: signing
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: echo "present=$([ -n "$KS_B64" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore release signing keystore
+        if: steps.signing.outputs.present == 'true'
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KS_B64" | base64 -d > app/android/app/onepass-release.jks
+          cat > app/android/key.properties <<EOF
+          storeFile=onepass-release.jks
+          storePassword=${KS_PASS}
+          keyAlias=${KEY_ALIAS}
+          keyPassword=${KEY_PASS}
+          EOF
+
       # The Rust core (app/rust) is compiled by cargokit during this Gradle run
       # and linked into the APK as librust_lib_onepass.so.
       # arm64-only: matches the installed Rust target (first release scope).
-      - name: Build release APK (debug-signed, installable)
+      - name: Build release APK (release-signed when keystore present)
         working-directory: app
         run: flutter build apk --release --target-platform android-arm64
 
