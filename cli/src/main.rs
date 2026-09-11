@@ -77,6 +77,12 @@ fn open_or_create(file: &str) -> Result<App, String> {
             };
             match open(&data, password.as_bytes()) {
                 Ok(vault) => {
+                    if !vault.losses.is_empty() {
+                        eprintln!(
+                            "note: this vault contains metadata OnePass does not preserve ({}); saving will drop it",
+                            vault.losses.describe()
+                        );
+                    }
                     return Ok(App::new(vault, password, file.to_string()));
                 }
                 Err(e) => {
@@ -116,6 +122,7 @@ fn open_or_create(file: &str) -> Result<App, String> {
                 name: "Root".to_string(),
                 ..Default::default()
             },
+            ..Default::default()
         };
         Ok(App::new(vault, password, file.to_string()))
     }
@@ -163,7 +170,7 @@ fn run_app(terminal: &mut DefaultTerminal, mut app: App) -> Result<(), Box<dyn s
     if app.dirty && !app.discard_on_quit {
         match save(&app.vault, app.password.as_bytes()) {
             Ok(bytes) => {
-                std::fs::write(&app.file, bytes)?;
+                app::write_atomic(&app.file, &bytes)?;
                 eprintln!("Unsaved changes were saved to {}", app.file);
             }
             Err(e) => eprintln!("warning: auto-save failed: {e}"),

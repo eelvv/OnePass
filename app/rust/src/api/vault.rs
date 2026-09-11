@@ -95,7 +95,10 @@ pub async fn add_otp_entry(input: OtpEntryInput) -> BridgeResult<String> {
     logic::core_add_otp_entry(&input)
 }
 
-pub async fn update_password_entry(uuid_hex: String, input: PasswordEntryInput) -> BridgeResult<()> {
+pub async fn update_password_entry(
+    uuid_hex: String,
+    input: PasswordEntryInput,
+) -> BridgeResult<()> {
     logic::core_update_password_entry(&uuid_hex, &input)
 }
 

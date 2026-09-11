@@ -71,10 +71,9 @@ impl From<EngineError> for BridgeError {
                 ErrorKind::InvalidParameter,
                 format!("invalid secret length: {n} bytes"),
             ),
-            EngineError::InvalidYandexChecksum => BridgeError::new(
-                ErrorKind::InvalidParameter,
-                "yandex secret checksum failed",
-            ),
+            EngineError::InvalidYandexChecksum => {
+                BridgeError::new(ErrorKind::InvalidParameter, "yandex secret checksum failed")
+            }
             EngineError::InvalidUri(m) => {
                 BridgeError::new(ErrorKind::InvalidParameter, format!("invalid uri: {m}"))
             }
@@ -99,7 +98,9 @@ impl From<EngineError> for BridgeError {
                 format!("unsupported otp type: {t}"),
             ),
             EngineError::Kdf(m) => BridgeError::new(ErrorKind::Format, format!("kdf: {m}")),
-            EngineError::Encoding(m) => BridgeError::new(ErrorKind::Other, format!("encoding: {m}")),
+            EngineError::Encoding(m) => {
+                BridgeError::new(ErrorKind::Other, format!("encoding: {m}"))
+            }
             EngineError::Clock => BridgeError::new(ErrorKind::Other, "system clock unavailable"),
         }
     }

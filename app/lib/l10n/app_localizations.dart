@@ -608,6 +608,24 @@ abstract class AppLocalizations {
   /// **'Password of the vault to import'**
   String get vaultPasswordPrompt;
 
+  /// No description provided for @importDirtyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsaved changes'**
+  String get importDirtyTitle;
+
+  /// No description provided for @importDirtyConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing replaces the current vault; unsaved changes will be lost. Continue?'**
+  String get importDirtyConfirm;
+
+  /// No description provided for @confirmContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get confirmContinue;
+
   /// No description provided for @logs.
   ///
   /// In en, this message translates to:

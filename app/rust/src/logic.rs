@@ -35,14 +35,17 @@ fn now_dotnet() -> i64 {
 // Lifecycle
 
 pub(crate) fn core_open(path: &str, password: Zeroizing<Vec<u8>>) -> BridgeResult<Vec<EntryDto>> {
-    let data =
-        std::fs::read(path).map_err(|e| BridgeError::new(ErrorKind::Io, format!("read {path}: {e}")))?;
+    let data = std::fs::read(path)
+        .map_err(|e| BridgeError::new(ErrorKind::Io, format!("read {path}: {e}")))?;
     let vault = onepass_engine::db::open(&data, password.as_slice())?;
     let dtos = entries_to_dtos(&vault);
 
     let mut guard = lock_session();
     if guard.is_some() {
-        return Err(BridgeError::new(ErrorKind::SessionState, "a vault is already open".to_string()));
+        return Err(BridgeError::new(
+            ErrorKind::SessionState,
+            "a vault is already open".to_string(),
+        ));
     }
     *guard = Some(SessionState {
         vault,
@@ -62,7 +65,10 @@ pub(crate) fn core_create(
 
     let mut guard = lock_session();
     if guard.is_some() {
-        return Err(BridgeError::new(ErrorKind::SessionState, "a vault is already open".to_string()));
+        return Err(BridgeError::new(
+            ErrorKind::SessionState,
+            "a vault is already open".to_string(),
+        ));
     }
     *guard = Some(SessionState {
         vault,
@@ -73,28 +79,38 @@ pub(crate) fn core_create(
     Ok(())
 }
 
-/// Saves the session vault atomically (temp file + rename, one .bak kept).
-/// Returns `false` when there was nothing to save.
+/// Saves the session vault atomically (temp file + fsync + rename, one .bak
+/// kept). Returns `false` when there was nothing to save.
 pub(crate) fn core_save() -> BridgeResult<bool> {
     let (vault, password, path) = {
         let mut guard = lock_session();
-        let s = guard
-            .as_mut()
-            .ok_or_else(|| BridgeError::new(ErrorKind::SessionState, "vault is locked".to_string()))?;
+        let s = guard.as_mut().ok_or_else(|| {
+            BridgeError::new(ErrorKind::SessionState, "vault is locked".to_string())
+        })?;
         if !s.dirty {
             return Ok(false);
         }
+        // Clear the flag *before* the slow KDF/encrypt: any mutation that
+        // lands during the save re-sets it on the live session, so concurrent
+        // edits are never marked as saved. On failure the flag is restored.
+        s.dirty = false;
         // Clone out of the lock so KDF/encryption never blocks OTP ticks.
         (s.vault.clone(), s.password.clone(), s.file_path.clone())
     };
 
-    let bytes = save_with(&vault, password.as_slice(), &SaveOptions::default())?;
-    atomic_write(&path, &bytes)?;
+    let result = save_with(&vault, password.as_slice(), &SaveOptions::default())
+        .map_err(BridgeError::from)
+        .and_then(|bytes| atomic_write(&path, &bytes));
 
-    with_session(|s| {
-        s.dirty = false;
-        Ok(())
-    })?;
+    if let Err(e) = result {
+        // The on-disk file is untouched (atomic_write either wrote nothing or
+        // kept the previous copy as .bak), so the session is still dirty.
+        with_session(|s| {
+            s.dirty = true;
+            Ok(())
+        })?;
+        return Err(e);
+    }
     Ok(true)
 }
 
@@ -107,8 +123,8 @@ pub(crate) fn core_import_vault_file(
     password: Zeroizing<Vec<u8>>,
     target: &str,
 ) -> BridgeResult<Vec<EntryDto>> {
-    let data =
-        std::fs::read(path).map_err(|e| BridgeError::new(ErrorKind::Io, format!("read {path}: {e}")))?;
+    let data = std::fs::read(path)
+        .map_err(|e| BridgeError::new(ErrorKind::Io, format!("read {path}: {e}")))?;
     // Validate against the picked file BEFORE touching the current session:
     // a wrong password must leave the existing vault untouched.
     let vault = onepass_engine::db::open(&data, password.as_slice())?;
@@ -117,6 +133,14 @@ pub(crate) fn core_import_vault_file(
     // Swap sessions: the old one drops (password zeroized); the new one
     // targets the app vault path so the next save materializes a fresh copy.
     let mut guard = lock_session();
+    // Refuse to silently destroy unsaved work in the current session; the
+    // caller must save or lock first.
+    if guard.as_ref().is_some_and(|s| s.dirty) {
+        return Err(BridgeError::new(
+            ErrorKind::SessionState,
+            "current vault has unsaved changes; save or lock before importing".to_string(),
+        ));
+    }
     *guard = Some(SessionState {
         vault,
         password,
@@ -165,8 +189,12 @@ pub(crate) fn core_list_entries() -> BridgeResult<Vec<EntryDto>> {
 pub(crate) fn core_entry_detail(uuid_hex: &str) -> BridgeResult<EntryDetail> {
     with_session(|s| {
         let uuid = decode_uuid(uuid_hex)?;
-        let entry = find_in_group(&s.vault.root, &uuid)
-            .ok_or_else(|| BridgeError::new(ErrorKind::InvalidParameter, format!("entry {uuid_hex} not found")))?;
+        let entry = find_in_group(&s.vault.root, &uuid).ok_or_else(|| {
+            BridgeError::new(
+                ErrorKind::InvalidParameter,
+                format!("entry {uuid_hex} not found"),
+            )
+        })?;
         Ok(EntryDetail {
             uuid: uuid_hex.to_string(),
             icon_id: entry.icon_id,
@@ -178,7 +206,11 @@ pub(crate) fn core_entry_detail(uuid_hex: &str) -> BridgeResult<EntryDetail> {
                 .map(|f| FieldDto {
                     key: f.key.clone(),
                     // Protected values are never bulk-shipped to Dart.
-                    value: if f.protected { String::new() } else { f.value.clone() },
+                    value: if f.protected {
+                        String::new()
+                    } else {
+                        f.value.clone()
+                    },
                     protected: f.protected,
                 })
                 .collect(),
@@ -189,8 +221,12 @@ pub(crate) fn core_entry_detail(uuid_hex: &str) -> BridgeResult<EntryDetail> {
 pub(crate) fn core_reveal_field(uuid_hex: &str, key: &str) -> BridgeResult<String> {
     with_session(|s| {
         let uuid = decode_uuid(uuid_hex)?;
-        let entry = find_in_group(&s.vault.root, &uuid)
-            .ok_or_else(|| BridgeError::new(ErrorKind::InvalidParameter, format!("entry {uuid_hex} not found")))?;
+        let entry = find_in_group(&s.vault.root, &uuid).ok_or_else(|| {
+            BridgeError::new(
+                ErrorKind::InvalidParameter,
+                format!("entry {uuid_hex} not found"),
+            )
+        })?;
         Ok(entry.get(key).unwrap_or("").to_string())
     })
 }
@@ -220,8 +256,12 @@ pub(crate) fn core_update_password_entry(
 ) -> BridgeResult<()> {
     with_session(|s| {
         let uuid = decode_uuid(uuid_hex)?;
-        let entry = find_in_group_mut(&mut s.vault.root, &uuid)
-            .ok_or_else(|| BridgeError::new(ErrorKind::InvalidParameter, format!("entry {uuid_hex} not found")))?;
+        let entry = find_in_group_mut(&mut s.vault.root, &uuid).ok_or_else(|| {
+            BridgeError::new(
+                ErrorKind::InvalidParameter,
+                format!("entry {uuid_hex} not found"),
+            )
+        })?;
         entry.set_field(TITLE, &input.title, false);
         entry.set_field(USER_NAME, &input.username, false);
         // Empty password means "keep the current one".
@@ -240,8 +280,12 @@ pub(crate) fn core_update_otp_entry(uuid_hex: &str, input: &OtpEntryInput) -> Br
     with_session(|s| {
         let params = otp_params_from_input(input)?;
         let uuid = decode_uuid(uuid_hex)?;
-        let entry = find_in_group_mut(&mut s.vault.root, &uuid)
-            .ok_or_else(|| BridgeError::new(ErrorKind::InvalidParameter, format!("entry {uuid_hex} not found")))?;
+        let entry = find_in_group_mut(&mut s.vault.root, &uuid).ok_or_else(|| {
+            BridgeError::new(
+                ErrorKind::InvalidParameter,
+                format!("entry {uuid_hex} not found"),
+            )
+        })?;
         set_entry_otp(entry, &params)?;
         entry.set_field(TITLE, &otp_title(&params), false);
         if !params.account.is_empty() {
@@ -309,8 +353,7 @@ pub(crate) fn core_otp_info(uuid_hex: &str) -> BridgeResult<Option<OtpInfoDto>> 
 pub(crate) fn core_otp_code(uuid_hex: &str, time_secs: u64) -> BridgeResult<Option<String>> {
     with_session(|s| {
         let uuid = decode_uuid(uuid_hex)?;
-        Ok(find_in_group(&s.vault.root, &uuid)
-            .and_then(|e| entry_otp_code(e, time_secs)))
+        Ok(find_in_group(&s.vault.root, &uuid).and_then(|e| entry_otp_code(e, time_secs)))
     })
 }
 
@@ -377,8 +420,12 @@ fn otp_params_from_input(input: &OtpEntryInput) -> BridgeResult<OtpParams> {
     if input.secret_or_uri.trim_start().starts_with("otpauth://") {
         return Ok(uri::parse(input.secret_or_uri.trim())?);
     }
-    let secret = base32::decode_tolerant(input.secret_or_uri.trim())
-        .map_err(|e| BridgeError::new(ErrorKind::InvalidParameter, format!("invalid base32 secret: {e}")))?;
+    let secret = base32::decode_tolerant(input.secret_or_uri.trim()).map_err(|e| {
+        BridgeError::new(
+            ErrorKind::InvalidParameter,
+            format!("invalid base32 secret: {e}"),
+        )
+    })?;
     Ok(OtpParams {
         kind: OtpKind::parse(&input.kind)?,
         secret,
@@ -430,7 +477,9 @@ fn find_in_group_mut<'a>(g: &'a mut Group, uuid: &[u8]) -> Option<&'a mut Entry>
     if let Some(e) = g.entries.iter_mut().find(|e| e.uuid == uuid) {
         return Some(e);
     }
-    g.groups.iter_mut().find_map(|sg| find_in_group_mut(sg, uuid))
+    g.groups
+        .iter_mut()
+        .find_map(|sg| find_in_group_mut(sg, uuid))
 }
 
 fn entries_to_dtos(v: &Vault) -> Vec<EntryDto> {
@@ -474,11 +523,22 @@ fn prune_group(g: &mut Group, uuids: &[Vec<u8>]) {
 }
 
 fn atomic_write(path: &str, bytes: &[u8]) -> BridgeResult<()> {
+    use std::io::Write;
     let tmp = format!("{path}.tmp");
-    std::fs::write(&tmp, bytes).map_err(|e| BridgeError::new(ErrorKind::Io, format!("write {tmp}: {e}")))?;
+    {
+        let mut f = std::fs::File::create(&tmp)
+            .map_err(|e| BridgeError::new(ErrorKind::Io, format!("create {tmp}: {e}")))?;
+        f.write_all(bytes)
+            .map_err(|e| BridgeError::new(ErrorKind::Io, format!("write {tmp}: {e}")))?;
+        // Flush to platters before renaming so a crash/power loss can never
+        // leave a truncated database at `path`.
+        f.sync_all()
+            .map_err(|e| BridgeError::new(ErrorKind::Io, format!("sync {tmp}: {e}")))?;
+    }
     // Keep the previous good file as a one-generation backup.
     let _ = std::fs::rename(path, format!("{path}.bak"));
-    std::fs::rename(&tmp, path).map_err(|e| BridgeError::new(ErrorKind::Io, format!("rename {tmp}: {e}")))?;
+    std::fs::rename(&tmp, path)
+        .map_err(|e| BridgeError::new(ErrorKind::Io, format!("rename {tmp}: {e}")))?;
     Ok(())
 }
 
@@ -670,5 +730,35 @@ mod tests {
 
     fn is_dirty_state() -> bool {
         crate::session::with_session(|s| Ok(s.dirty)).expect("dirty")
+    }
+
+    #[test]
+    fn import_refuses_unsaved_changes() {
+        let _g = TEST_LOCK.lock().unwrap();
+        let _ = core_lock();
+
+        let path = temp_copy("import-dirty");
+        let other = temp_copy("import-other");
+        core_open(&path, Zeroizing::new(b"example1".to_vec())).expect("open");
+
+        // Dirty session: importing a different vault must fail closed...
+        core_add_password_entry(&pw_input("Unsaved")).expect("add");
+        assert!(is_dirty_state());
+        let err = core_import_vault_file(&other, Zeroizing::new(b"example1".to_vec()), &path)
+            .unwrap_err();
+        assert_eq!(err.kind, ErrorKind::SessionState);
+        // ...and the previous session must still be intact.
+        assert_eq!(core_list_entries().unwrap().len(), 3);
+
+        // Saving clears the flag, after which the import succeeds.
+        assert!(core_save().unwrap());
+        core_import_vault_file(&other, Zeroizing::new(b"example1".to_vec()), &path)
+            .expect("import after save");
+        assert!(is_dirty_state());
+        core_lock().unwrap();
+
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&other);
+        let _ = std::fs::remove_file(format!("{path}.bak"));
     }
 }

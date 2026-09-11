@@ -29,8 +29,10 @@ Future<void> copyWithAutoClear(
 }
 
 /// Seconds until the current TOTP window ends (for countdown rings).
+/// Returns 0 for a non-positive period (e.g. HOTP entries have none) instead
+/// of throwing a modulo-by-zero error.
 int otpRemaining(int period, int epochSecs) =>
-    period - (epochSecs % period);
+    period <= 0 ? 0 : period - (epochSecs % period);
 
 /// Formats .NET-epoch seconds as a short local date (best effort).
 String formatDotnetDate(BuildContext context, int dotnetSecs) {

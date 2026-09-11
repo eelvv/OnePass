@@ -36,9 +36,6 @@ pub fn with_session<T>(f: impl FnOnce(&mut SessionState) -> BridgeResult<T>) -> 
     let mut guard = lock_session();
     match guard.as_mut() {
         Some(s) => f(s),
-        None => Err(BridgeError::new(
-            ErrorKind::SessionState,
-            "vault is locked",
-        )),
+        None => Err(BridgeError::new(ErrorKind::SessionState, "vault is locked")),
     }
 }

@@ -270,6 +270,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vaultPasswordPrompt => 'Password of the vault to import';
 
   @override
+  String get importDirtyTitle => 'Unsaved changes';
+
+  @override
+  String get importDirtyConfirm =>
+      'Importing replaces the current vault; unsaved changes will be lost. Continue?';
+
+  @override
+  String get confirmContinue => 'Continue';
+
+  @override
   String get logs => 'Logs';
 
   @override

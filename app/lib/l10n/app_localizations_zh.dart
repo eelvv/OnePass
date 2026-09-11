@@ -269,6 +269,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get vaultPasswordPrompt => '输入该密码库的主密码';
 
   @override
+  String get importDirtyTitle => '有未保存的修改';
+
+  @override
+  String get importDirtyConfirm => '导入将替换当前密码库，未保存的修改会丢失。继续？';
+
+  @override
+  String get confirmContinue => '继续';
+
+  @override
   String get logs => '日志';
 
   @override

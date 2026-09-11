@@ -332,6 +332,13 @@ impl App {
                 self.form = AddForm::default();
                 self.mode = Mode::AddEntry;
             }
+            // Documented shortcut: add a 2FA entry directly (the form's type
+            // row still allows switching back to Password).
+            KeyCode::Char('t') => {
+                self.form = AddForm::default();
+                self.form.kind = AddFormKind::TwoFa;
+                self.mode = Mode::AddEntry;
+            }
             KeyCode::Char('d') => self.request_delete(),
             KeyCode::Enter => {
                 // Details focus: open inline single-field edit mode.
@@ -877,7 +884,7 @@ impl App {
 
     pub fn do_save(&mut self) {
         match save(&self.vault, self.password.as_bytes()) {
-            Ok(bytes) => match fs::write(&self.file, bytes) {
+            Ok(bytes) => match write_atomic(&self.file, &bytes) {
                 Ok(()) => {
                     self.dirty = false;
                     self.message = Some(format!("Saved to {}", self.file));
@@ -965,6 +972,21 @@ impl App {
 }
 
 // -- helpers ----------------------------------------------------------------
+
+/// Writes the vault atomically: temp file + fsync + rename, keeping the
+/// previous copy as a one-generation `.bak`. A crash mid-write can never
+/// truncate the vault file.
+pub fn write_atomic(path: &str, bytes: &[u8]) -> std::io::Result<()> {
+    use std::io::Write;
+    let tmp = format!("{path}.tmp");
+    {
+        let mut f = std::fs::File::create(&tmp)?;
+        f.write_all(bytes)?;
+        f.sync_all()?;
+    }
+    let _ = std::fs::rename(path, format!("{path}.bak"));
+    std::fs::rename(&tmp, path)
+}
 
 impl App {
     /// Mutable borrow of the text buffer backing the currently selected row.

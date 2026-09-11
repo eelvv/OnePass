@@ -103,6 +103,30 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
     if (picked == null || srcPath == null) return;
 
     if (!mounted) return;
+    // Importing replaces the whole session; refuse to silently destroy
+    // unsaved changes (the Rust side also fails closed on this).
+    if (bridge.isDirty()) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(l10n.importDirtyTitle),
+          content: Text(l10n.importDirtyConfirm),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(l10n.confirmContinue),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true) return;
+      if (!mounted) return;
+    }
+
     final pwController = TextEditingController();
     final password = await showDialog<String>(
       context: context,
