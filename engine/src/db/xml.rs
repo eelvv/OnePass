@@ -8,15 +8,79 @@ use base64::Engine;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 
+use crate::db::inner_header::InnerBinary;
 use crate::db::random_bytes;
 use crate::db::stream::protected::ProtectedStream;
 use crate::error::{Error, Result};
+
+/// Metadata constructs that were present in the parsed file but are **not**
+/// preserved by this data model, i.e. what a save would drop.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct LossReport {
+    /// Previous entry revisions inside `<History>` (skipped, not merged).
+    pub history_entries: usize,
+    /// Entry attachment references (`<Binary Ref>` under entry `<Binaries>`);
+    /// the referenced inner-header blobs are kept, but the entry-level link
+    /// is not round-tripped.
+    pub binary_refs: usize,
+    /// `<CustomData><Item>` records (file / group / entry level).
+    pub custom_data: usize,
+    /// `<DeletedObjects><DeletedObject>` records.
+    pub deleted_objects: usize,
+    /// Inner-header attachments that are encrypted with the inner random
+    /// stream. They cannot be carried over: each save regenerates the stream
+    /// key, and the bytes would silently stop decrypting, so they are
+    /// dropped and reported instead.
+    pub protected_binaries: usize,
+}
+
+impl LossReport {
+    pub fn is_empty(&self) -> bool {
+        self.history_entries == 0
+            && self.binary_refs == 0
+            && self.custom_data == 0
+            && self.deleted_objects == 0
+            && self.protected_binaries == 0
+    }
+
+    /// One-line human-readable summary, e.g. `"2 history item(s), 1
+    /// attachment reference(s)"`. Empty string when nothing is lost.
+    pub fn describe(&self) -> String {
+        let mut parts = Vec::new();
+        if self.history_entries > 0 {
+            parts.push(format!("{} history item(s)", self.history_entries));
+        }
+        if self.binary_refs > 0 {
+            parts.push(format!("{} attachment reference(s)", self.binary_refs));
+        }
+        if self.protected_binaries > 0 {
+            parts.push(format!(
+                "{} stream-encrypted attachment(s)",
+                self.protected_binaries
+            ));
+        }
+        if self.custom_data > 0 {
+            parts.push(format!("{} custom-data item(s)", self.custom_data));
+        }
+        if self.deleted_objects > 0 {
+            parts.push(format!("{} deleted-object record(s)", self.deleted_objects));
+        }
+        parts.join(", ")
+    }
+}
 
 /// A decrypted KDBX vault.
 #[derive(Debug, Clone, Default)]
 pub struct Vault {
     pub database_name: String,
     pub root: Group,
+    /// Unprotected binary attachments from the KDBX 4 inner header, carried
+    /// over verbatim across open → save. Stream-encrypted ones are reported
+    /// in [`Vault::losses`] instead (their bytes would stop decrypting once
+    /// the inner stream key is regenerated).
+    pub binaries: Vec<InnerBinary>,
+    /// What the source file contained that this model does not preserve.
+    pub losses: LossReport,
 }
 
 impl Vault {
@@ -28,6 +92,7 @@ impl Vault {
                 uuid: random_bytes(16)?,
                 ..Default::default()
             },
+            ..Default::default()
         })
     }
 }
@@ -135,6 +200,10 @@ pub fn parse(xml: &[u8], stream: &mut ProtectedStream) -> Result<Vault> {
         current_field: None,
         in_entry: false,
         in_entry_times: false,
+        in_history: false,
+        in_custom_data: false,
+        in_deleted: false,
+        losses: LossReport::default(),
         capture: Capture::None,
     };
 
@@ -150,6 +219,7 @@ pub fn parse(xml: &[u8], stream: &mut ProtectedStream) -> Result<Vault> {
             _ => {}
         }
     }
+    p.vault.losses = p.losses;
     Ok(p.vault)
 }
 
@@ -161,12 +231,49 @@ struct Parser<'a> {
     current_field: Option<Field>,
     in_entry: bool,
     in_entry_times: bool,
+    /// Inside an entry's `<History>` block (previous revisions).
+    in_history: bool,
+    /// Inside a `<CustomData>` map (meta, group, or entry level).
+    in_custom_data: bool,
+    /// Inside the root `<DeletedObjects>` list.
+    in_deleted: bool,
+    /// Constructs seen in the document but not representable in [`Vault`].
+    losses: LossReport,
     capture: Capture,
 }
 
 impl Parser<'_> {
     fn start(&mut self, e: &BytesStart) {
+        // Inside <History> every nested element belongs to a previous entry
+        // revision. The model has no place for history; parsing it naively is
+        // worse than dropping it — the nested </Entry> would push the
+        // revision as a real entry and clear the live one, so opening a
+        // KeePass file with history would REPLACE every entry by its first
+        // revision. Skip the whole block and count what was skipped.
+        if self.in_history {
+            if e.name().as_ref() == b"Entry" {
+                self.losses.history_entries += 1;
+            }
+            return;
+        }
+        if self.in_custom_data {
+            if e.name().as_ref() == b"Item" {
+                self.losses.custom_data += 1;
+            }
+            return;
+        }
+        if self.in_deleted {
+            if e.name().as_ref() == b"DeletedObject" {
+                self.losses.deleted_objects += 1;
+            }
+            return;
+        }
+
         match e.name().as_ref() {
+            b"History" if self.in_entry => self.in_history = true,
+            b"CustomData" => self.in_custom_data = true,
+            b"DeletedObjects" => self.in_deleted = true,
+            b"Binary" if self.in_entry => self.losses.binary_refs += 1,
             b"Group" => {
                 self.group_stack.push(Group::default());
                 self.in_entry = false;
@@ -291,6 +398,27 @@ impl Parser<'_> {
     }
 
     fn end(&mut self, name: &[u8]) {
+        // Leave the skip-contexts first; everything nested inside them was
+        // already counted in `start` and must not reach the state machine.
+        if self.in_history {
+            if name == b"History" {
+                self.in_history = false;
+            }
+            return;
+        }
+        if self.in_custom_data {
+            if name == b"CustomData" {
+                self.in_custom_data = false;
+            }
+            return;
+        }
+        if self.in_deleted {
+            if name == b"DeletedObjects" {
+                self.in_deleted = false;
+            }
+            return;
+        }
+
         match name {
             b"Times" => self.in_entry_times = false,
             b"String" => {
@@ -536,4 +664,82 @@ fn esc(s: &str) -> String {
 
 fn b64(bytes: &[u8]) -> String {
     base64::engine::general_purpose::STANDARD.encode(bytes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::ProtectedStreamKind;
+
+    fn parse_str(xml: &str) -> Vault {
+        let mut stream = ProtectedStream::new(ProtectedStreamKind::ChaCha20, &[0x42u8; 32]);
+        parse(xml.as_bytes(), &mut stream).unwrap()
+    }
+
+    /// A KeePass-shaped document with the constructs this model does not
+    /// preserve: entry history, an entry attachment, custom data, and
+    /// deleted objects.
+    const LOSSY_XML: &str = r#"<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<KeePassFile><Meta><Generator>KeePass</Generator>
+<CustomData><Item><Key>k</Key><Value>v</Value></Item></CustomData>
+</Meta><Root>
+<Group><UUID>AAAAAAAAAAAAAAAAAAAAAA==</UUID><Name>Root</Name>
+<Entry><UUID>BBBBBBBBBBBBBBBBBBBBBA==</UUID><IconID>1</IconID>
+<String><Key>Title</Key><Value>Live Entry</Value></String>
+<String><Key>Password</Key><Value Protected="True">AAAA</Value></String>
+<History>
+  <Entry><UUID>CCCCCCCCCCCCCCCCCCCCCA==</UUID><String><Key>Title</Key><Value>Old 1</Value></String></Entry>
+  <Entry><UUID>DDDDDDDDDDDDDDDDDDDDDDA==</UUID><String><Key>Title</Key><Value>Old 2</Value></String></Entry>
+</History>
+<Binaries><Binary Ref="0"><Key>f.txt</Key><Value>SGVsbG8=</Value></Binary></Binaries>
+</Entry>
+</Group>
+<DeletedObjects><DeletedObject><UUID>EEEEEEEEEEEEEEEEEEEEEA==</UUID></DeletedObject></DeletedObjects>
+</Root></KeePassFile>"#;
+
+    /// Regression: history revisions used to REPLACE the live entry (the
+    /// nested `</Entry>` pushed the revision and cleared the current one).
+    #[test]
+    fn history_does_not_replace_live_entries() {
+        let vault = parse_str(LOSSY_XML);
+        assert_eq!(vault.root.entries.len(), 1, "only the live entry remains");
+        let e = &vault.root.entries[0];
+        assert_eq!(e.title(), Some("Live Entry"));
+        let pw = e.fields.iter().find(|f| f.key == "Password").unwrap();
+        assert!(pw.protected, "live entry keeps its protected field");
+    }
+
+    #[test]
+    fn lossy_constructs_are_counted() {
+        let vault = parse_str(LOSSY_XML);
+        assert_eq!(vault.losses.history_entries, 2);
+        assert_eq!(vault.losses.binary_refs, 1);
+        assert_eq!(vault.losses.custom_data, 1);
+        assert_eq!(vault.losses.deleted_objects, 1);
+        assert_eq!(vault.losses.protected_binaries, 0); // set by vault::open
+        assert!(!vault.losses.is_empty());
+        assert!(vault.losses.describe().contains("2 history item(s)"));
+    }
+
+    #[test]
+    fn own_output_reports_no_losses() {
+        let mut vault = Vault::create("t").unwrap();
+        let mut e = Entry::default();
+        e.set_field("Title", "x", false);
+        e.set_field("Password", "secret", true);
+        vault.root.entries.push(e);
+        vault.root.groups.push(Group {
+            uuid: vec![7u8; 16],
+            name: "Sub".to_string(),
+            ..Default::default()
+        });
+
+        let mut enc = ProtectedStream::new(ProtectedStreamKind::ChaCha20, &[7u8; 32]);
+        let xml = serialize(&vault, &mut enc, &[0u8; 32]).unwrap();
+        // Same key as the serializer, fresh stream at position 0.
+        let mut dec = ProtectedStream::new(ProtectedStreamKind::ChaCha20, &[7u8; 32]);
+        let parsed = parse(&xml, &mut dec).unwrap();
+        assert!(parsed.losses.is_empty(), "{:?}", parsed.losses);
+        assert_eq!(parsed.root.entries[0].password(), Some("secret"));
+    }
 }

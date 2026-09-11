@@ -15,7 +15,7 @@ pub mod xml;
 
 pub use fields::{NOTES, OTP, PASSWORD, TITLE, URL, USER_NAME};
 pub use header::{Compression, KdbxHeader};
-pub use inner_header::InnerHeader;
+pub use inner_header::{InnerBinary, InnerHeader};
 pub use kdf_params::{Argon2Variant, KdfParams};
 pub use otp::{entry_otp, entry_otp_code, set_entry_otp};
 pub use stream::protected::{ProtectedStream, ProtectedStreamKind};
@@ -25,7 +25,7 @@ pub use transfer::{
     import_otpauth_uris, otp_entries,
 };
 pub use vault::{open, save, save_with, SaveOptions};
-pub use xml::{Entry, Field, Group, Times, Vault};
+pub use xml::{Entry, Field, Group, LossReport, Times, Vault};
 
 /// Fills `len` bytes with cryptographically secure randomness.
 pub fn random_bytes(len: usize) -> crate::error::Result<Vec<u8>> {

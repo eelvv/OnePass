@@ -45,6 +45,7 @@ fn otp_survives_save_open() {
             entries: vec![entry],
             ..Default::default()
         },
+        ..Default::default()
     };
 
     let saved = save(&vault, b"test-pass").unwrap();
@@ -53,6 +54,9 @@ fn otp_survives_save_open() {
     let e = &opened.root.entries[0];
     assert_eq!(e.title(), Some("GitHub"));
     assert_eq!(e.username(), Some("alice"));
+    // The otp field must come back protected: it embeds the raw secret.
+    let otp_field = e.fields.iter().find(|f| f.key == "otp").unwrap();
+    assert!(otp_field.protected, "otp field must survive as protected");
     // RFC 6238: secret "12345678901234567890", T=59 → "94287082".
     assert_eq!(entry_otp_code(e, 59).unwrap(), "94287082");
 }

@@ -146,29 +146,37 @@ impl VariantDictionary {
             let value = read_bytes(data, &mut pos, value_len)?;
 
             let vd = match type_byte {
-                0x04 if value.len() == 4 => {
-                    VdValue::UInt32(u32::from_le_bytes(value.try_into().unwrap()))
-                }
-                0x05 if value.len() == 8 => {
-                    VdValue::UInt64(u64::from_le_bytes(value.try_into().unwrap()))
-                }
-                0x08 if value.len() == 1 => VdValue::Bool(value[0] != 0),
-                0x0C if value.len() == 4 => {
-                    VdValue::Int32(i32::from_le_bytes(value.try_into().unwrap()))
-                }
-                0x0D if value.len() == 8 => {
-                    VdValue::Int64(i64::from_le_bytes(value.try_into().unwrap()))
-                }
+                // Known types with a wrong value size are a real corruption
+                // signal — error out instead of silently dropping the entry
+                // (which would surface later as a misleading "missing KDF
+                // parameter" error).
+                0x04 => VdValue::UInt32(u32::from_le_bytes(fixed::<4>(value)?)),
+                0x05 => VdValue::UInt64(u64::from_le_bytes(fixed::<8>(value)?)),
+                0x08 => VdValue::Bool(fixed::<1>(value)?[0] != 0),
+                0x0C => VdValue::Int32(i32::from_le_bytes(fixed::<4>(value)?)),
+                0x0D => VdValue::Int64(i64::from_le_bytes(fixed::<8>(value)?)),
                 0x18 => VdValue::String(String::from_utf8(value.to_vec()).map_err(|_| {
                     Error::Encoding("invalid variant dict value utf-8".to_string())
                 })?),
                 0x42 => VdValue::ByteArray(value.to_vec()),
-                _ => continue, // unknown type: skip
+                // Unknown types are skipped for forward compatibility, exactly
+                // like KeePass does.
+                _ => continue,
             };
             dict.map.insert(name, vd);
         }
         Ok(dict)
     }
+}
+
+/// Converts a value slice to a fixed-size array, erroring on size mismatch.
+fn fixed<const N: usize>(value: &[u8]) -> Result<[u8; N]> {
+    value.try_into().map_err(|_| {
+        Error::Encoding(format!(
+            "variant dict value must be {N} bytes, got {}",
+            value.len()
+        ))
+    })
 }
 
 fn read_u8(data: &[u8], pos: &mut usize) -> Result<u8> {
@@ -190,7 +198,9 @@ fn read_u32(data: &[u8], pos: &mut usize) -> Result<u32> {
 }
 
 fn read_bytes<'a>(data: &'a [u8], pos: &mut usize, len: usize) -> Result<&'a [u8]> {
-    if *pos + len > data.len() {
+    // saturating_sub instead of `pos + len`: a hostile u32 name/value length
+    // must never overflow the bounds check.
+    if len > data.len().saturating_sub(*pos) {
         return Err(Error::Encoding("truncated variant dictionary".to_string()));
     }
     let s = &data[*pos..*pos + len];

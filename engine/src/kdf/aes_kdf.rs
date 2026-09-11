@@ -2,8 +2,13 @@
 //!
 //! Reference algorithm (KeePass 2.x / KeePassDX): the 32-byte composite key is
 //! encrypted `rounds` times with AES-256 in ECB mode (key = 32-byte transform
-//! seed), then the result is hashed with SHA-256. If the seed or key is not
-//! exactly 32 bytes it is first hashed with SHA-256.
+//! seed). If the seed or key is not exactly 32 bytes it is first hashed with
+//! SHA-256.
+//!
+//! The ECB result **is** the transformed key — no extra hash here. The single
+//! SHA-256 that finalizes the chain happens once at the master-seed mixing
+//! stage (`keys::final_key` = SHA-256(master_seed || transformed_key)), which
+//! is shared by the AES-KDF and Argon2 paths alike.
 
 use aes::cipher::{Block, BlockEncrypt, KeyInit};
 use aes::Aes256;
@@ -28,6 +33,10 @@ fn normalize32(data: &[u8]) -> [u8; 32] {
 /// - `seed`: 32-byte transform seed (else SHA-256 hashed first)
 /// - `composite_key`: 32-byte composite key (else SHA-256 hashed first)
 /// - `rounds`: number of AES-256-ECB iterations (>= 1)
+///
+/// Returns the raw 32-byte transformed key. It is *not* hashed here: the
+/// chain-level SHA-256 (`keys::final_key`) is the one hash KeePass applies,
+/// and adding another one would make every AES-KDF vault undecryptable.
 pub fn transform_aes_kdf(seed: &[u8], composite_key: &[u8], rounds: u64) -> Result<[u8; 32]> {
     let seed32 = normalize32(seed);
     let mut key = normalize32(composite_key);
@@ -40,7 +49,7 @@ pub fn transform_aes_kdf(seed: &[u8], composite_key: &[u8], rounds: u64) -> Resu
             key[i..i + 16].copy_from_slice(&block);
         }
     }
-    Ok(Sha256::digest(key).into())
+    Ok(key)
 }
 
 #[cfg(test)]

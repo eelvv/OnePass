@@ -58,7 +58,7 @@ pub fn open(data: &[u8], password: &[u8]) -> Result<Vault> {
         Compression::None => compressed,
     };
 
-    let (xml_bytes, mut stream) = if header.version >= VERSION_40 {
+    let (xml_bytes, mut stream, inner_binaries) = if header.version >= VERSION_40 {
         let (inner, xml_offset) =
             InnerHeader::parse(&payload).map_err(|e| Error::Format(e.to_string()))?;
         let kind = match inner.inner_random_stream_id {
@@ -66,7 +66,7 @@ pub fn open(data: &[u8], password: &[u8]) -> Result<Vault> {
             _ => ProtectedStreamKind::ChaCha20,
         };
         let stream = ProtectedStream::new(kind, &inner.inner_random_stream_key);
-        (&payload[xml_offset..], stream)
+        (&payload[xml_offset..], stream, inner.binaries)
     } else {
         let kind = match header.inner_random_stream_id {
             Some(2) => ProtectedStreamKind::Salsa20,
@@ -74,10 +74,18 @@ pub fn open(data: &[u8], password: &[u8]) -> Result<Vault> {
         };
         let key = header.inner_random_stream_key.unwrap_or([0u8; 32]);
         let stream = ProtectedStream::new(kind, &key);
-        (&payload[..], stream)
+        (&payload[..], stream, Vec::new())
     };
 
-    xml::parse(xml_bytes, &mut stream).map_err(|e| Error::Format(e.to_string()))
+    let mut vault = xml::parse(xml_bytes, &mut stream).map_err(|e| Error::Format(e.to_string()))?;
+
+    // Carry plain attachments over verbatim. Stream-encrypted ones cannot
+    // survive a save (the inner stream key is regenerated, so their bytes
+    // would silently stop decrypting) — drop and report them instead.
+    let (plain, protected) = inner_binaries.into_iter().partition(|b| !b.protected);
+    vault.binaries = plain;
+    vault.losses.protected_binaries = protected.len();
+    Ok(vault)
 }
 
 /// Tunables for [`save_with`]. Random salts, seeds, and IVs are always
@@ -158,7 +166,7 @@ pub fn save_with(vault: &Vault, password: &[u8], options: &SaveOptions) -> Resul
     let inner = InnerHeader {
         inner_random_stream_id: 3,
         inner_random_stream_key: inner_key,
-        binaries: Vec::new(),
+        binaries: vault.binaries.clone(),
     };
     let mut payload = inner.serialize();
     payload.extend_from_slice(&xml_bytes);
@@ -223,12 +231,18 @@ fn transform(header: &KdbxHeader, composite: &[u8; 32]) -> Result<[u8; 32]> {
                 Argon2Variant::Argon2d => Argon2Kind::Argon2d,
                 Argon2Variant::Argon2id => Argon2Kind::Argon2id,
             };
+            // Reject silent u64 → u32 truncation: a crafted header claiming
+            // huge M/I must error, not wrap into a weak KDF.
+            let memory_kib = u32::try_from(memory / 1024)
+                .map_err(|_| Error::Kdf("argon2 memory exceeds u32 KiB".to_string()))?;
+            let iterations = u32::try_from(*iterations)
+                .map_err(|_| Error::Kdf("argon2 iterations exceed u32".to_string()))?;
             transform_argon2(
                 kind,
                 composite,
                 salt,
-                (memory / 1024) as u32,
-                *iterations as u32,
+                memory_kib,
+                iterations,
                 *parallelism,
                 *version,
             )

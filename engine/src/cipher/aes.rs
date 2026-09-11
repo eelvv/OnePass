@@ -3,8 +3,9 @@
 use aes::Aes256;
 use cbc::{Decryptor, Encryptor};
 use cipher::block_padding::Pkcs7;
-use cipher::{BlockDecryptMut, BlockEncryptMut, KeyIvInit};
+use cipher::{Block, BlockDecryptMut, BlockEncryptMut, KeyIvInit};
 
+use crate::cipher::unpad_pkcs7_ct;
 use crate::error::{Error, Result};
 
 type Aes256CbcEnc = Encryptor<Aes256>;
@@ -21,12 +22,17 @@ pub fn encrypt(key: &[u8], iv: &[u8], plaintext: &[u8]) -> Result<Vec<u8>> {
 }
 
 pub fn decrypt(key: &[u8], iv: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>> {
-    let cipher = Aes256CbcDec::new_from_slices(key, iv).map_err(|_| Error::InvalidSecret)?;
+    let mut cipher = Aes256CbcDec::new_from_slices(key, iv).map_err(|_| Error::InvalidSecret)?;
     let mut buf = ciphertext.to_vec();
-    let pt = cipher
-        .decrypt_padded_mut::<Pkcs7>(&mut buf)
-        .map_err(|_| Error::Encoding("aes-cbc decrypt failed (bad key or padding)".to_string()))?;
-    Ok(pt.to_vec())
+    // CBC-decrypt block by block, then unpad in constant time.
+    for chunk in buf.as_chunks_mut::<16>().0 {
+        let mut block = Block::<Aes256>::clone_from_slice(chunk);
+        cipher.decrypt_block_mut(&mut block);
+        chunk.copy_from_slice(&block);
+    }
+    let end = unpad_pkcs7_ct(&buf, 16)?;
+    buf.truncate(end);
+    Ok(buf)
 }
 
 #[cfg(test)]

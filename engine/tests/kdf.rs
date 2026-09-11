@@ -3,7 +3,11 @@
 //! - Argon2 vectors are from KeePassDX's reference (JNI Argon2 reference
 //!   implementation), password "password", salt "saltsaltsaltsalt", t=2,
 //!   m=65536 KiB, p=2, v=0x13.
-//! - AES-KDF vectors are from an independent Python (cryptography) reference.
+//! - AES-KDF vectors are from an independent Python (cryptography) reference
+//!   implementing the KeePass spec: AES-256-ECB rounds only, no extra hash.
+//!   (The chain-level SHA-256 lives in `keys::final_key`.) Cross-checked:
+//!   SHA-256 of each vector below reproduces the pre-fix vectors that had the
+//!   erroneous extra hash, byte for byte.
 
 use onepass_engine::encoding::hex;
 use onepass_engine::kdf::{transform_aes_kdf, transform_argon2, Argon2Kind};
@@ -39,19 +43,19 @@ fn aes_kdf_python_vectors() {
     let cases = [
         (
             1u64,
-            "aec37a882b6113e1c172dd62bcba0cff15b5ff71bec097f5f06bba19154384d8",
+            "61a6936e4e8f101c1cc1f993b542a0d4e2740e8afad4e4d15d0d661b382eca89",
         ),
         (
             2u64,
-            "e40d724d816c01638079de3f10629a47ab20d60ad3b273317eaa99fda23bb627",
+            "813efd24102eb0bc47c81b02c0d9141810a26b2f74427492a8840d11c832fd2a",
         ),
         (
             3u64,
-            "96065d1f3ab267d7e9c281cb310e30b79b06d7374bd70df83a18d0c903a4cee0",
+            "383c959652efd1b0666f6c015ccd7a37196638264142d00f2d5baa2adc0703e4",
         ),
         (
             6000u64,
-            "da86f7be13d8149c58bb5ebaf591bd8825c4b904d913d5daa2e25e3bdb2ab2a8",
+            "314dd073796c2843a202b9f338cb8f9f601326b2ed1ee1e398260357718eb510",
         ),
     ];
     for (rounds, expected) in cases {

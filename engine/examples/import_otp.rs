@@ -62,6 +62,7 @@ fn main() {
                 entries,
                 ..Default::default()
             },
+            ..Default::default()
         },
     };
     if vault.database_name.is_empty() {

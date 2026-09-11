@@ -45,3 +45,30 @@ fn save_roundtrip() {
     // Wrong password must fail on the saved file too.
     assert!(open(&saved, b"wrong").is_err());
 }
+
+#[test]
+fn attachments_survive_save_open() {
+    use onepass_engine::db::{random_bytes, InnerBinary, Vault};
+
+    let vault = Vault {
+        database_name: "attachments".to_string(),
+        root: Group {
+            uuid: random_bytes(16).unwrap(),
+            name: "Root".to_string(),
+            ..Default::default()
+        },
+        binaries: vec![InnerBinary {
+            protected: false,
+            data: b"hello attachment".to_vec(),
+        }],
+        ..Default::default()
+    };
+
+    let saved = save(&vault, b"pw").unwrap();
+    let opened = open(&saved, b"pw").unwrap();
+
+    assert_eq!(opened.binaries.len(), 1, "attachment blob must survive");
+    assert_eq!(opened.binaries[0].data, b"hello attachment".to_vec());
+    assert!(!opened.binaries[0].protected);
+    assert!(opened.losses.is_empty());
+}

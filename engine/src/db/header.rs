@@ -294,7 +294,9 @@ fn read_u64_slice(data: &[u8]) -> Result<u64> {
 }
 
 fn read_bytes<'a>(data: &'a [u8], pos: &mut usize, len: usize) -> Result<&'a [u8]> {
-    if *pos + len > data.len() {
+    // saturating_sub instead of `pos + len`: a hostile u32 field size must
+    // never overflow the bounds check.
+    if len > data.len().saturating_sub(*pos) {
         return Err(Error::Encoding("truncated header".to_string()));
     }
     let s = &data[*pos..*pos + len];

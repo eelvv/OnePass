@@ -184,6 +184,7 @@ fn imported_entries_survive_save_open() {
             entries: vec![entry],
             ..Default::default()
         },
+        ..Default::default()
     };
 
     let saved = save(&vault, b"pw").unwrap();

@@ -167,6 +167,7 @@ fn main() {
             name: "Root".to_string(),
             ..Default::default()
         },
+        ..Default::default()
     };
     vault.root.groups.push(dev);
     vault.root.groups.push(social);

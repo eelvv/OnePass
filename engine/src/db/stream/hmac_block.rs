@@ -6,6 +6,7 @@
 
 use hmac::{Hmac, Mac};
 use sha2::{Digest, Sha256, Sha512};
+use subtle::ConstantTimeEq;
 
 use crate::error::{Error, Result};
 
@@ -59,7 +60,10 @@ pub fn decode(data: &[u8], hmac_key: &[u8; 64]) -> Result<Vec<u8>> {
         mac.update(&(size as u32).to_le_bytes());
         mac.update(block);
         let computed = mac.finalize().into_bytes();
-        if computed.as_slice() != stored {
+        // Constant-time comparison: the block key derives from the secret
+        // composite key, so a short-circuiting `!=` would be a (very local)
+        // timing oracle on MAC validity.
+        if !bool::from(computed.as_slice().ct_eq(stored)) {
             // The block key derives from the master key; a verification
             // failure means the password/key does not match the data.
             return Err(Error::WrongPassword);
@@ -92,7 +96,9 @@ fn read_u32(data: &[u8], pos: &mut usize) -> Result<u32> {
 }
 
 fn read_bytes<'a>(data: &'a [u8], pos: &mut usize, len: usize) -> Result<&'a [u8]> {
-    if *pos + len > data.len() {
+    // saturating_sub instead of `pos + len`: a hostile u32 block size must
+    // never overflow the bounds check.
+    if len > data.len().saturating_sub(*pos) {
         return Err(Error::Format("truncated hmac block stream".to_string()));
     }
     let s = &data[*pos..*pos + len];

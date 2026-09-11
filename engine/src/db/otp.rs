@@ -4,14 +4,14 @@
 //! value is an `otpauth://` URI (the same scheme used by KeePassXC, Aegis,
 //! Google Authenticator). This module bridges [`crate::otp`] with [`Entry`].
 
-use crate::db::{Entry, Field};
+use crate::db::{Entry, Field, OTP};
 use crate::error::Result;
 use crate::otp::OtpParams;
 use crate::uri;
 
 /// Parses OTP parameters from an entry's `otp` field (an `otpauth://` URI).
 pub fn entry_otp(entry: &Entry) -> Option<OtpParams> {
-    let uri_str = entry.get("otp")?;
+    let uri_str = entry.get(OTP)?;
     uri::parse(uri_str).ok()
 }
 
@@ -21,13 +21,18 @@ pub fn entry_otp_code(entry: &Entry, time_secs: u64) -> Option<String> {
 }
 
 /// Sets or replaces the entry's `otp` field from OTP parameters.
+///
+/// The field is always written **protected**: the `otpauth://` URI embeds the
+/// raw OTP secret in base32, so it must ride the inner random stream like a
+/// password (same convention as `transfer::entry_from_otp_params` and the
+/// KeePassXC/Aegis `otp` field).
 pub fn set_entry_otp(entry: &mut Entry, params: &OtpParams) -> Result<()> {
     let uri_str = uri::build(params)?;
-    entry.fields.retain(|f| f.key != "otp");
+    entry.fields.retain(|f| f.key != OTP);
     entry.fields.push(Field {
-        key: "otp".to_string(),
+        key: OTP.to_string(),
         value: uri_str,
-        protected: false,
+        protected: true,
     });
     Ok(())
 }
@@ -65,6 +70,9 @@ mod tests {
         assert_eq!(params.secret, b"12345678901234567890");
         // RFC 6238 vector: secret "12345678901234567890", T=59 → "94287082".
         assert_eq!(entry_otp_code(&e, 59).unwrap(), "94287082");
+        // The otp field embeds the raw secret, so it must be protected.
+        let f = e.fields.iter().find(|f| f.key == OTP).unwrap();
+        assert!(f.protected, "otp field must be protected");
     }
 
     #[test]

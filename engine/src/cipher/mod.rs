@@ -89,6 +89,34 @@ impl CipherAlgorithm {
     }
 }
 
+/// Constant-time PKCS#7 unpadding: validates every padding byte in one
+/// branch-free pass and returns the plaintext length.
+///
+/// `block-padding`'s `Pkcs7::unpad` short-circuits on the first mismatching
+/// byte, leaking padding validity through timing. KDBX 4 authenticates the
+/// ciphertext before it is ever decrypted, but the public decrypt API is also
+/// callable directly, so the unpad here is hardened.
+fn unpad_pkcs7_ct(buf: &[u8], bs: usize) -> Result<usize> {
+    let len = buf.len();
+    if len == 0 || !len.is_multiple_of(bs) {
+        return Err(Error::Encoding("invalid ciphertext length".to_string()));
+    }
+    let pad = buf[len - 1] as usize;
+    // OR-accumulate (byte ^ pad) over the whole trailing block, masked by
+    // whether that byte belongs to the padding. Every branch below depends
+    // only on the public buffer length, never on plaintext bytes.
+    let mut diff: u8 = 0;
+    for i in 0..bs {
+        let in_pad = ((bs - i) <= pad) as u8;
+        diff |= in_pad & (buf[len - bs + i] ^ (pad as u8));
+    }
+    let valid = (pad >= 1) as u8 & (pad <= bs) as u8 & ((diff == 0) as u8);
+    if valid == 0 {
+        return Err(Error::Encoding("bad padding".to_string()));
+    }
+    Ok(len - pad)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
