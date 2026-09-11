@@ -42,6 +42,10 @@ String formatDotnetDate(BuildContext context, int dotnetSecs) {
   return MaterialLocalizations.of(context).formatShortDate(dt);
 }
 
+/// Root navigator key: lock flows pop all pushed routes before swapping
+/// the home to the lock screen (keeps the navigation stack consistent).
+final appNavigatorKey = GlobalKey<NavigatorState>();
+
 extension L10nX on BuildContext {
   AppLocalizations get l10n => AppLocalizations.of(this)!;
 }

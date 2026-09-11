@@ -345,4 +345,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get grace5m => '5 分钟';
+
+  @override
+  String get input2faKey => '输入2FA密钥';
 }

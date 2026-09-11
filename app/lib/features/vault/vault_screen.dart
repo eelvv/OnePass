@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -93,107 +92,6 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
       ref.read(selectedEntryProvider.notifier).select(null);
       await _afterMutation();
     }
-  }
-
-  Future<void> _importFile() async {
-    final l10n = context.l10n;
-    final messenger = ScaffoldMessenger.of(context);
-    final files = await FilePicker.pickFiles(type: FileType.any);
-    final picked = files.firstOrNull;
-    final srcPath = picked?.path;
-    if (picked == null || srcPath == null) return;
-    final bytes = await picked.readAsBytes();
-    try {
-      final imported = await bridge.importFromBytes(bytes: bytes);
-      await _afterMutation();
-      if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l10n.imported(imported.length))),
-        );
-      }
-    } catch (e, st) {
-      Logger.e('kdbx/2fa file import failed', e, st);
-      if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(friendlyError(l10n, e))),
-        );
-      }
-    }
-  }
-
-  Future<void> _importUriText() async {
-    final l10n = context.l10n;
-    final messenger = ScaffoldMessenger.of(context);
-    final controller = TextEditingController();
-    final text = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.importPickUriText),
-        content: TextField(
-          controller: controller,
-          maxLines: 6,
-          decoration: InputDecoration(hintText: l10n.importUriHint),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: Text(l10n.save),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (text == null || text.trim().isEmpty) return;
-    try {
-      final imported = await bridge.importFromOtpauthText(text: text);
-      await _afterMutation();
-      if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l10n.imported(imported.length))),
-        );
-      }
-    } catch (e, st) {
-      Logger.e('otpauth text import failed', e, st);
-      if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(friendlyError(l10n, e))),
-        );
-      }
-    }
-  }
-
-  Future<void> _exportOtpauth() async {
-    final l10n = context.l10n;
-    final messenger = ScaffoldMessenger.of(context);
-    final text = await bridge.exportOtpauthText();
-    await SharePlus.instance.share(
-      ShareParams(text: text, subject: 'OnePass otpauth'),
-    );
-    messenger.showSnackBar(
-      SnackBar(content: Text(l10n.exportShared)),
-    );
-  }
-
-  Future<void> _exportAegis() async {
-    final l10n = context.l10n;
-    final messenger = ScaffoldMessenger.of(context);
-    final bytes = await bridge.exportAegis();
-    final tmp = '${Directory.systemTemp.path}/onepass-aegis-'
-        '${DateTime.now().millisecondsSinceEpoch}.json';
-    await File(tmp).writeAsBytes(bytes);
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(tmp, mimeType: 'application/json')],
-        subject: 'OnePass Aegis export',
-      ),
-    );
-    messenger.showSnackBar(
-      SnackBar(content: Text(l10n.exportShared)),
-    );
   }
 
   Future<void> _importKdbx() async {
@@ -293,11 +191,6 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
               title: Text(l10n.manualAdd2fa),
               onTap: () => Navigator.pop(sheetContext, 'manual2fa'),
             ),
-            ListTile(
-              leading: const Icon(Icons.download_outlined),
-              title: Text(l10n.importData),
-              onTap: () => Navigator.pop(sheetContext, 'import'),
-            ),
           ],
         ),
       ),
@@ -320,72 +213,7 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
         );
       case 'manual2fa':
         await openEntryEditor(context, ref, initialType2fa: true);
-      case 'import':
-        _showIoSheet();
     }
-  }
-
-  void _showIoSheet() {
-    final l10n = context.l10n;
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.upload_file),
-              title: Text(l10n.importPickFile),
-              onTap: () {
-                Navigator.pop(context);
-                _importFile();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.content_paste),
-              title: Text(l10n.importPickUriText),
-              onTap: () {
-                Navigator.pop(context);
-                _importUriText();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.folder_zip_outlined),
-              title: Text(l10n.importKdbx),
-              onTap: () {
-                Navigator.pop(context);
-                _importKdbx();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.save_alt),
-              title: Text(l10n.exportKdbx),
-              onTap: () {
-                Navigator.pop(context);
-                _exportKdbx();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.verified_user_outlined),
-              title: Text(l10n.exportOtpauth),
-              onTap: () {
-                Navigator.pop(context);
-                _exportOtpauth();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.data_object),
-              title: Text(l10n.exportAegis),
-              onTap: () {
-                Navigator.pop(context);
-                _exportAegis();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -413,10 +241,14 @@ class _VaultScreenState extends ConsumerState<VaultScreen> {
             ),
             PopupMenuButton<String>(
               onSelected: (v) {
-                if (v == 'io') _showIoSheet();
+                if (v == 'importKdbx') _importKdbx();
+                if (v == 'exportKdbx') _exportKdbx();
               },
               itemBuilder: (context) => [
-                PopupMenuItem(value: 'io', child: Text(l10n.importAction)),
+                PopupMenuItem(
+                    value: 'importKdbx', child: Text(l10n.importKdbx)),
+                PopupMenuItem(
+                    value: 'exportKdbx', child: Text(l10n.exportKdbx)),
               ],
             ),
           ]

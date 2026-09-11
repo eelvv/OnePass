@@ -237,27 +237,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           .update(settings.copyWith(lockOnBackground: v)),
                     ),
                     if (settings.lockOnBackground)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(l10n.lockGrace,
-                                  style:
-                                      Theme.of(context).textTheme.bodyMedium),
-                            ),
-                            SegmentedButton<int>(
-                              segments: const [
-                                ButtonSegment(value: 0, label: Text('0s')),
-                                ButtonSegment(value: 30, label: Text('30s')),
-                                ButtonSegment(value: 60, label: Text('1m')),
-                                ButtonSegment(value: 300, label: Text('5m')),
-                              ],
-                              selected: {settings.lockGraceSecs},
-                              onSelectionChanged: (s) => controller.update(
-                                  settings.copyWith(lockGraceSecs: s.first)),
-                            ),
+                      ListTile(
+                        leading: const Icon(Icons.timer_outlined),
+                        title: Text(l10n.lockGrace),
+                        trailing: DropdownButton<int>(
+                          value: settings.lockGraceSecs,
+                          underline: const SizedBox.shrink(),
+                          items: const [
+                            DropdownMenuItem(value: 0, child: Text('0s')),
+                            DropdownMenuItem(value: 30, child: Text('30s')),
+                            DropdownMenuItem(value: 60, child: Text('1m')),
+                            DropdownMenuItem(value: 300, child: Text('5m')),
                           ],
+                          onChanged: (v) => controller.update(
+                              settings.copyWith(lockGraceSecs: v ?? 60)),
                         ),
                       ),
                     SwitchListTile(

@@ -348,4 +348,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get grace5m => '5 minutes';
+
+  @override
+  String get input2faKey => 'Enter 2FA secret';
 }

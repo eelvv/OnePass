@@ -110,5 +110,6 @@
   "graceImmediate": "立即",
   "grace30s": "30 秒",
   "grace1m": "1 分钟",
-  "grace5m": "5 分钟"
+  "grace5m": "5 分钟",
+  "input2faKey": "输入2FA密钥"
 }

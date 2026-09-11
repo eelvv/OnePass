@@ -3,6 +3,7 @@
 library;
 
 export '../shared/ui_utils.dart'
-    show L10nX, copyWithAutoClear, formatDotnetDate, otpRemaining;
+    show L10nX, appNavigatorKey, copyWithAutoClear, formatDotnetDate,
+         otpRemaining;
 export 'settings.dart';
 export 'vault.dart';

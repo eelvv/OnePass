@@ -30,6 +30,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
   bool _modeResolved = false;
   bool _busy = false;
   bool _biometricReady = false;
+  bool _autoPromptShown = false;
 
   @override
   void initState() {
@@ -57,6 +58,12 @@ class _LockScreenState extends ConsumerState<LockScreen> {
         _biometricReady = !exists && canBiometric;
         _modeResolved = true;
       });
+    }
+    // Biometric is the default unlock path when enabled: fire the system
+    // prompt once automatically; the fingerprint icon re-triggers manually.
+    if (_biometricReady && !_autoPromptShown) {
+      _autoPromptShown = true;
+      Future.microtask(_biometricUnlock);
     }
   }
 
@@ -248,12 +255,21 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                 : Text(_createMode ? l10n.createVault : l10n.unlock),
           ),
           if (_biometricReady && !_createMode) ...[
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: _busy ? null : _biometricUnlock,
-              icon: const Icon(Icons.fingerprint),
-              label: Text(l10n.unlockWithBiometric),
+            const SizedBox(height: 16),
+            // Manual re-trigger: large fingerprint touch target.
+            InkWell(
+              onTap: _busy ? null : _biometricUnlock,
+              customBorder: const CircleBorder(),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Icon(
+                  Icons.fingerprint,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
             ),
+            const SizedBox(height: 8),
           ],
         ],
       ),

@@ -261,8 +261,9 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
     } catch (e, st) {
       Logger.e('entry save failed', e, st);
       if (e is BridgeError && e.kind == ErrorKind.sessionState) {
-        // Session dropped (e.g. auto-lock race): surface the lock screen
-        // instead of leaving the editor in a dead state.
+        // Session dropped (e.g. auto-lock race): clear the navigation
+        // stack and surface the lock screen.
+        appNavigatorKey.currentState?.popUntil((route) => route.isFirst);
         if (mounted) {
           ref.read(lockedProvider.notifier).setLocked(true);
         }
@@ -279,13 +280,13 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
   /// (loading / load-error / form) so the screen can always be exited.
   Widget _header(BuildContext context) {
     final l10n = context.l10n;
+    final title = _existingUuid != null
+        ? l10n.editEntry
+        : (_is2fa ? l10n.input2faKey : l10n.addPassword);
     return Row(
       children: [
         Expanded(
-          child: Text(
-            _existingUuid == null ? l10n.addEntry : l10n.editEntry,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          child: Text(title, style: Theme.of(context).textTheme.titleLarge),
         ),
         IconButton(
           icon: const Icon(Icons.close),
@@ -347,15 +348,6 @@ class _EntryEditorState extends ConsumerState<EntryEditor> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _header(context),
-            const SizedBox(height: 12),
-            SegmentedButton<bool>(
-              segments: [
-                ButtonSegment(value: false, label: Text(l10n.typePassword)),
-                ButtonSegment(value: true, label: Text(l10n.type2fa)),
-              ],
-              selected: {_is2fa},
-              onSelectionChanged: (s) => setState(() => _is2fa = s.first),
-            ),
             const SizedBox(height: 16),
             if (!_is2fa) ...[
               TextFormField(

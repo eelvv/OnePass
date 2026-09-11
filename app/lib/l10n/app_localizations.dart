@@ -763,6 +763,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'5 minutes'**
   String get grace5m;
+
+  /// No description provided for @input2faKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter 2FA secret'**
+  String get input2faKey;
 }
 
 class _AppLocalizationsDelegate

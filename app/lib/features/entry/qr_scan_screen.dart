@@ -1,3 +1,5 @@
+import 'dart:math' show min;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_zxing/flutter_zxing.dart';
 
@@ -32,33 +34,42 @@ class _QrScanScreenState extends State<QrScanScreen> {
     final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.scanQr)),
-      body: Stack(
-        children: [
-          ReaderWidget(
-            codeFormat: Format.qrCode,
-            tryHarder: true,
-            onScan: _onScan,
-          ),
-          // Framing hint.
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  l10n.scanHint,
-                  style: const TextStyle(color: Colors.white),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Mirror flutter_zxing's geometry: the cut-out is centered and
+          // spans 50% of the smaller side. Place the hint right below it.
+          final smaller = min(constraints.maxWidth, constraints.maxHeight);
+          final frameSize = smaller * 0.5;
+          final hintTop = (constraints.maxHeight + frameSize) / 2 + 20;
+
+          return Stack(
+            children: [
+              ReaderWidget(
+                codeFormat: Format.qrCode,
+                tryHarder: true,
+                onScan: _onScan,
+              ),
+              Positioned(
+                top: hintTop,
+                left: 24,
+                right: 24,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    l10n.scanHint,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }

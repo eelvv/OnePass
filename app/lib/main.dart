@@ -18,6 +18,12 @@ import 'features/vault/vault_screen.dart';
 import 'state/providers.dart';
 import 'theme/app_theme.dart';
 
+Future<void> _lockNow(WidgetRef ref) async {
+  appNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+  await bridge.lockVault();
+  ref.read(lockedProvider.notifier).setLocked(true);
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // File logging first, then global error hooks - both feed diagnostics.
@@ -84,8 +90,7 @@ class _OnePassAppState extends ConsumerState<OnePassApp>
     if (state == AppLifecycleState.paused) {
       if (grace <= 0) {
         Logger.i('auto-lock on background (immediate)');
-        await bridge.lockVault();
-        ref.read(lockedProvider.notifier).setLocked(true);
+        await _lockNow(ref);
       } else {
         _pausedAt = DateTime.now();
       }
@@ -94,8 +99,7 @@ class _OnePassAppState extends ConsumerState<OnePassApp>
       _pausedAt = null;
       if (gone >= grace) {
         Logger.i('auto-lock: background grace of $grace s exceeded ($gone s)');
-        await bridge.lockVault();
-        ref.read(lockedProvider.notifier).setLocked(true);
+        await _lockNow(ref);
       }
     }
   }
@@ -118,8 +122,21 @@ class _OnePassAppState extends ConsumerState<OnePassApp>
     };
 
     return MaterialApp(
+      navigatorKey: appNavigatorKey,
       title: 'OnePass',
       locale: locale,
+      // System-language mode (locale == null): Chinese systems get Chinese,
+      // everything else falls back to English explicitly - independent of
+      // the supportedLocales order. An explicit user pick (locale != null)
+      // bypasses this callback entirely.
+      localeListResolutionCallback: (deviceLocales, supported) {
+        if (deviceLocales != null) {
+          for (final l in deviceLocales) {
+            if (l.languageCode == 'zh') return const Locale('zh');
+          }
+        }
+        return const Locale('en');
+      },
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
         AppLocalizations.delegate,

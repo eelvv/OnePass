@@ -124,5 +124,6 @@
   "graceImmediate": "Immediately",
   "grace30s": "30 seconds",
   "grace1m": "1 minute",
-  "grace5m": "5 minutes"
+  "grace5m": "5 minutes",
+  "input2faKey": "Enter 2FA secret"
 }
