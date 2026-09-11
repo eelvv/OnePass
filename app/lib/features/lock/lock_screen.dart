@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/errors.dart';
 import '../../shared/biometric.dart';
 import '../../shared/logger.dart';
+import '../../src/rust/api/error.dart';
 import '../../src/rust/api/vault.dart' as bridge;
 import '../../state/providers.dart';
 
@@ -21,7 +22,8 @@ class LockScreen extends ConsumerStatefulWidget {
   ConsumerState<LockScreen> createState() => _LockScreenState();
 }
 
-class _LockScreenState extends ConsumerState<LockScreen> {
+class _LockScreenState extends ConsumerState<LockScreen>
+    with WidgetsBindingObserver {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -35,15 +37,52 @@ class _LockScreenState extends ConsumerState<LockScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _resolveMode();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _nameController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    // With lock-grace = 0 the lock screen mounts while the app is going to
+    // the background: the auto prompt then fires into a backgrounded
+    // activity (Android cannot show it), and on some ROMs the availability
+    // check also fails off-foreground — leaving this state without the
+    // fingerprint button for good. Re-evaluate on every return to the
+    // foreground so both the button and the prompt come back.
+    _rearmBiometric();
+  }
+
+  /// Re-checks biometric availability in the foreground and re-arms the
+  /// automatic prompt — at most one auto prompt per foreground entry.
+  Future<void> _rearmBiometric() async {
+    if (!_modeResolved || _createMode || _busy) return;
+    if (!ref.read(settingsProvider).biometricEnabled) {
+      if (mounted && _biometricReady) setState(() => _biometricReady = false);
+      return;
+    }
+    final ready = await BiometricService.canAuthenticate();
+    if (!mounted) return;
+    if (!ready) {
+      if (_biometricReady) setState(() => _biometricReady = false);
+      return;
+    }
+    setState(() {
+      _biometricReady = true;
+    });
+    // One auto prompt per foreground entry; the flag also keeps the initial
+    // resolve from double-firing.
+    _autoPromptShown = true;
+    Future.microtask(_biometricUnlock);
   }
 
   Future<void> _resolveMode() async {
@@ -79,6 +118,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
 
     final path = await ref.read(vaultPathProvider.future);
     String? error;
+    var droppedSecret = false;
     try {
       final entries = await bridge.openVault(
         path: path,
@@ -89,12 +129,20 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     } catch (e, st) {
       Logger.e('biometric unlock failed', e, st);
       error = friendlyError(l10n, e);
-      // Stored password no longer matches (vault re-imported?): drop it.
-      await BiometricService.forget();
-      if (mounted) {
-        ref.read(settingsProvider.notifier).update(
-              ref.read(settingsProvider).copyWith(biometricEnabled: false),
-            );
+      // Only a password mismatch means the stored secret is stale (vault
+      // re-imported / master password changed): drop it and disable
+      // biometric unlock. Every other failure — transient IO, session
+      // races — must keep the setup intact; wiping on those silently
+      // disabled fingerprint unlock until re-enabled by hand.
+      final stale = e is BridgeError && e.kind == ErrorKind.wrongPassword;
+      if (stale) {
+        droppedSecret = true;
+        await BiometricService.forget();
+        if (mounted) {
+          ref.read(settingsProvider.notifier).update(
+                ref.read(settingsProvider).copyWith(biometricEnabled: false),
+              );
+        }
       }
     }
     if (!mounted) return;
@@ -102,7 +150,10 @@ class _LockScreenState extends ConsumerState<LockScreen> {
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(error)));
-      if (mounted) setState(() => _biometricReady = false);
+      if (mounted && droppedSecret) {
+        // The stored secret is gone; hide the button until re-enabled.
+        setState(() => _biometricReady = false);
+      }
       return;
     }
     ref.read(lockedProvider.notifier).setLocked(false);
